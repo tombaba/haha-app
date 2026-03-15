@@ -274,6 +274,18 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 .detail-pw-val{display:flex;align-items:center;gap:8px;margin-top:6px;}
 .detail-pw-masked{font-family:monospace;font-size:15px;letter-spacing:2px;color:var(--text2);}
 .detail-pw-eye{background:var(--bg2);border:1px solid var(--border);border-radius:6px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;user-select:none;}
+/* 賃借人管理 */
+.tc-card{background:var(--bg2);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:10px;cursor:pointer;overflow:hidden;border-left:4px solid var(--accent);}
+.tc-card.past{border-left-color:var(--border2);}
+.tc-card-inner{padding:13px 14px;}
+.tc-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;}
+.tc-card-title{font-size:14px;font-weight:700;flex:1;line-height:1.4;}
+.tc-card-badge{font-size:11px;padding:2px 9px;border-radius:20px;font-weight:700;white-space:nowrap;flex-shrink:0;margin-left:6px;}
+.tc-badge-current{background:var(--accent-light);color:var(--accent2);}
+.tc-badge-renewal{background:var(--success-light);color:var(--success);}
+.tc-badge-leave{background:var(--bg3);color:var(--text3);}
+.tc-card-meta{font-size:12px;color:var(--text2);}
+.tc-card-rent{font-size:14px;font-weight:700;color:var(--accent2);margin-top:4px;}
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
@@ -285,7 +297,7 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <div id="pin-screen">
   <div class="pin-logo">📬</div>
   <div class="pin-title">母の管理アプリ</div>
-  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v3.3</div>
+  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v4.0</div>
   <p id="pin-prompt">PINコードを入力してください</p>
   <div class="pin-dots">
     <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
@@ -378,11 +390,25 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
       </div>
     </div>
 
-    <!-- ===== 賃借人ページ（準備中） ===== -->
+    <!-- ===== 賃借人ページ ===== -->
     <div id="page-tenant" class="page">
-      <div class="empty-state">
-        <div class="empty-icon">🏠</div>
-        <div class="empty-msg">賃借人管理タブは<br>フェーズ4で追加予定です</div>
+      <div id="tenant-alert-banner"></div>
+      <button class="btn btn-secondary" style="width:100%;margin-bottom:12px;padding:12px;font-size:14px;" onclick="openTenantHouse()">🏠 貸家情報</button>
+      <div id="tenant-current-section">
+        <div class="sec-title">現在の契約</div>
+        <div id="tenant-current-list"></div>
+        <div class="empty-state" id="tenant-current-empty" style="display:none;">
+          <div class="empty-icon">🏠</div>
+          <div class="empty-msg">現在の契約はありません</div>
+        </div>
+      </div>
+      <div id="tenant-past-section" style="margin-top:1rem;">
+        <div class="sec-title">過去の契約</div>
+        <div id="tenant-past-list"></div>
+        <div class="empty-state" id="tenant-past-empty" style="display:none;">
+          <div class="empty-icon">📋</div>
+          <div class="empty-msg">過去の契約はありません</div>
+        </div>
       </div>
     </div>
 
@@ -474,6 +500,214 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <!-- FAB -->
 <button class="fab" id="fab" onclick="openMailEdit(null)">＋</button>
 <button class="fab" id="fab-docs" onclick="openDocEdit(null)">＋</button>
+<button class="fab" id="fab-tenant" onclick="openTenantEdit(null)">＋</button>
+
+<!-- ===== 貸家情報画面 ===== -->
+<div class="sub-screen" id="screen-tenant-house">
+  <div class="sub-header">
+    <button class="sub-back" onclick="closeScreen('screen-tenant-house')">←</button>
+    <div class="sub-title">🏠 貸家情報</div>
+  </div>
+  <div class="sub-content">
+    <div class="section-block">
+      <div class="section-block-title">📍 基本情報</div>
+      <div class="fg"><label class="fl">住所</label><input type="text" class="fi" id="th-addr" placeholder="例：東京都世田谷区…"></div>
+      <div class="fg"><label class="fl">面積</label><input type="text" class="fi" id="th-area" placeholder="例：65㎡"></div>
+      <div class="fg"><label class="fl">主な設備</label><textarea class="fi" id="th-facilities" placeholder="例：エアコン・ガスコンロ・追い焚き…"></textarea></div>
+      <div class="fg"><label class="fl">駐車場</label><input type="text" class="fi" id="th-parking" placeholder="例：有（月額5,000円）"></div>
+      <div class="fg"><label class="fl">コメント</label><textarea class="fi" id="th-comment" placeholder="その他特記事項"></textarea></div>
+    </div>
+    <div class="section-block">
+      <div class="section-block-title">📷 写真</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <div class="fl" style="margin-bottom:6px;">間取り</div>
+          <div class="img-slot" id="th-madori-slot" style="aspect-ratio:1;position:relative;" onclick="document.getElementById('th-madori-input').click()">
+            <div class="img-icon">📷</div><div class="img-label">間取り</div>
+          </div>
+          <input type="file" id="th-madori-input" accept="image/*" style="display:none" onchange="thPhotoSelect(this,'th-madori-slot')">
+        </div>
+        <div>
+          <div class="fl" style="margin-bottom:6px;">外観</div>
+          <div class="img-slot" id="th-gaikan-slot" style="aspect-ratio:1;position:relative;" onclick="document.getElementById('th-gaikan-input').click()">
+            <div class="img-icon">📷</div><div class="img-label">外観</div>
+          </div>
+          <input type="file" id="th-gaikan-input" accept="image/*" style="display:none" onchange="thPhotoSelect(this,'th-gaikan-slot')">
+        </div>
+      </div>
+    </div>
+    <div class="section-block">
+      <div class="section-block-title">🔑 鍵情報</div>
+      <div id="th-keys"></div>
+      <button class="btn-add-row" onclick="addThKeyRow()">＋ 鍵を追加</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveTenantHouse()">保存する</button>
+      <button class="btn btn-secondary" onclick="closeScreen('screen-tenant-house')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 賃借人契約 詳細画面 ===== -->
+<div class="sub-screen" id="screen-tenant-detail">
+  <div class="sub-header">
+    <div class="sub-title" id="tc-detail-title">賃貸契約書</div>
+  </div>
+  <div class="sub-content" id="tc-detail-content"></div>
+</div>
+
+<!-- ===== 賃借人契約 編集画面 ===== -->
+<div class="sub-screen" id="screen-tenant-edit">
+  <div class="sub-header">
+    <button class="sub-back" onclick="closeScreen('screen-tenant-edit')">←</button>
+    <div class="sub-title" id="tc-edit-title">契約を追加</div>
+  </div>
+  <div class="sub-content">
+    <input type="hidden" id="tc-id">
+
+    <!-- 契約情報 -->
+    <div class="section-block">
+      <div class="section-block-title">📋 契約情報</div>
+      <div class="fg">
+        <label class="fl">契約種別</label>
+        <div style="display:flex;gap:8px;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;padding:10px;border:1.5px solid var(--border);border-radius:8px;flex:1;background:var(--bg4);">
+            <input type="radio" name="tc-type" value="新規" id="tc-type-new" checked> 新規
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;padding:10px;border:1.5px solid var(--border);border-radius:8px;flex:1;background:var(--bg4);">
+            <input type="radio" name="tc-type" value="更新" id="tc-type-renewal"> 更新
+          </label>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">契約日</label><input type="date" class="fi" id="tc-date"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="fg">
+          <label class="fl">契約開始日 *</label>
+          <input type="date" class="fi" id="tc-start" oninput="calcTcPeriod()">
+          <div class="fi-error" id="tc-start-err">入力必須です</div>
+        </div>
+        <div class="fg">
+          <label class="fl">契約終了日 *</label>
+          <input type="date" class="fi" id="tc-end" oninput="calcTcPeriod()">
+          <div class="fi-error" id="tc-end-err">入力必須です</div>
+        </div>
+      </div>
+      <div id="tc-period-display" style="font-size:13px;color:var(--accent2);margin-bottom:10px;font-weight:500;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div class="fg"><label class="fl">賃料（円）</label><input type="number" inputmode="numeric" class="fi" id="tc-rent" placeholder="130000"></div>
+        <div class="fg"><label class="fl">敷金（円）</label><input type="number" inputmode="numeric" class="fi" id="tc-deposit" placeholder="260000"></div>
+        <div class="fg"><label class="fl">更新料（円）</label><input type="number" inputmode="numeric" class="fi" id="tc-renewal-fee" placeholder="130000"></div>
+      </div>
+      <div class="fg">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;padding:10px;background:var(--bg3);border-radius:8px;">
+          <input type="checkbox" id="tc-dispute-check" style="width:18px;height:18px;">
+          <span>賃貸住宅紛争防止条例に基づく説明書 受領済</span>
+        </label>
+      </div>
+      <div class="fg">
+        <label class="fl">入居申込書PDFリンク</label>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="url" class="fi" id="tc-application-url" placeholder="https://drive.google.com/..." style="flex:1;" oninput="updateTcAppLink()">
+          <a id="tc-application-link" href="#" target="_blank" rel="noopener" style="display:none;background:var(--accent-light);color:var(--accent2);border-radius:8px;padding:9px 12px;font-size:13px;white-space:nowrap;text-decoration:none;">📎 開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- 不動産会社情報 -->
+    <div class="section-block">
+      <div class="section-block-title">🏢 仲介不動産会社</div>
+      <div class="fg"><label class="fl">会社名</label><input type="text" class="fi" id="tc-company" placeholder="例：〇〇不動産"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="fg"><label class="fl">免許番号</label><input type="text" class="fi" id="tc-license" placeholder="例：東京都知事(3)第〇〇号"></div>
+        <div class="fg"><label class="fl">代表者名</label><input type="text" class="fi" id="tc-rep" placeholder="例：田中太郎"></div>
+      </div>
+      <div class="fg"><label class="fl">担当者名</label><input type="text" class="fi" id="tc-staff" placeholder="例：鈴木一郎"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="fg"><label class="fl">電話番号</label><input type="tel" class="fi" id="tc-tel" placeholder="03-0000-0000"></div>
+        <div class="fg"><label class="fl">メール</label><input type="email" class="fi" id="tc-email" placeholder="example@email.com"></div>
+      </div>
+      <div class="fg">
+        <label class="fl">契約書PDFリンク</label>
+        <div id="tc-pdf-links"></div>
+        <button class="btn-add-row" onclick="addPdfLinkRow('tc-pdf-links')">＋ リンクを追加</button>
+      </div>
+    </div>
+
+    <!-- 借家人情報 -->
+    <div class="section-block">
+      <div class="section-block-title">👤 借家人情報</div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;">
+        <div class="fg"><label class="fl">氏名 *</label><input type="text" class="fi" id="tc-tenant-name" placeholder="例：末廣英之"></div>
+        <div class="fg"><label class="fl">生年月日</label><input type="date" class="fi" id="tc-tenant-birth"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;">
+        <div class="fg"><label class="fl">勤務先会社名</label><input type="text" class="fi" id="tc-tenant-company" placeholder="例：〇〇株式会社"></div>
+        <div class="fg"><label class="fl">役職</label><input type="text" class="fi" id="tc-tenant-position" placeholder="例：部長"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="fg"><label class="fl">年収（万円）</label><input type="number" inputmode="numeric" class="fi" id="tc-tenant-income" placeholder="例：600"></div>
+        <div class="fg"><label class="fl">家賃支払い法人名</label><input type="text" class="fi" id="tc-tenant-corp" placeholder="法人払いの場合"></div>
+      </div>
+      <div class="fg"><label class="fl">家族構成</label><textarea class="fi" id="tc-tenant-family" placeholder="例：本人・配偶者・子1名"></textarea></div>
+      <div class="fg"><label class="fl">緊急連絡先</label><input type="text" class="fi" id="tc-tenant-emergency" placeholder="例：末廣花子（母）090-0000-0000"></div>
+    </div>
+
+    <!-- 連帯保証人 -->
+    <div class="section-block">
+      <div class="section-block-title">🤝 連帯保証人</div>
+      <div class="fg"><label class="fl">氏名</label><input type="text" class="fi" id="tc-guarantor-name" placeholder="例：末廣花子"></div>
+      <div class="fg"><label class="fl">住所</label><input type="text" class="fi" id="tc-guarantor-addr" placeholder="例：東京都〇〇区…"></div>
+      <div class="fg"><label class="fl">電話番号</label><input type="tel" class="fi" id="tc-guarantor-tel" placeholder="03-0000-0000"></div>
+      <div class="fg"><label class="fl">勤務先</label><input type="text" class="fi" id="tc-guarantor-company" placeholder="例：〇〇株式会社"></div>
+    </div>
+
+    <!-- 契約終了ステータス -->
+    <div class="section-block">
+      <div class="section-block-title">🔄 契約終了ステータス</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg4);">
+          <input type="radio" name="tc-status" value="" id="tc-status-none" checked> 未選択（継続中）
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg4);">
+          <input type="radio" name="tc-status" value="更新" id="tc-status-renewal" onchange="toggleTcStatus()"> 更新
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg4);">
+          <input type="radio" name="tc-status" value="退去" id="tc-status-leave" onchange="toggleTcStatus()"> 退去
+        </label>
+      </div>
+    </div>
+
+    <!-- 退去記録（退去選択時のみ表示） -->
+    <div class="section-block" id="tc-leave-block" style="display:none;">
+      <div class="section-block-title">🚪 退去記録</div>
+      <div class="fg"><label class="fl">退去日</label><input type="date" class="fi" id="tc-leave-date"></div>
+      <div class="fg">
+        <label class="fl">原状回復PDFリンク</label>
+        <div id="tc-recovery-links"></div>
+        <button class="btn-add-row" onclick="addPdfLinkRow('tc-recovery-links')">＋ リンクを追加</button>
+      </div>
+      <div class="fg">
+        <label class="fl" style="margin-bottom:8px;">敷金精算</label>
+        <div style="background:var(--bg3);border-radius:10px;padding:12px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <div><div style="font-size:12px;color:var(--text2);margin-bottom:4px;">敷金（自動取得）</div><div style="font-size:15px;font-weight:700;color:var(--accent2);" id="tc-deposit-display">¥0</div></div>
+            <div class="fg" style="margin:0;"><label class="fl">原状回復費用（円）</label><input type="number" inputmode="numeric" class="fi" id="tc-recovery-cost" placeholder="0" oninput="calcDeposit()"></div>
+          </div>
+          <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:13px;color:var(--text2);">返還額</span>
+            <span style="font-size:18px;font-weight:700;" id="tc-refund-display">¥0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveTenant()">保存する</button>
+      <button class="btn btn-secondary" onclick="closeScreen('screen-tenant-edit')">キャンセル</button>
+      <button class="btn btn-danger btn-sm" id="tc-del-btn" onclick="deleteTenant()" style="display:none;">削除</button>
+    </div>
+  </div>
+</div>
 
 <!-- ===== 郵便物 詳細・編集画面 ===== -->
 <div class="sub-screen" id="screen-mail-edit">
@@ -950,7 +1184,9 @@ let db = {
   fileMaster: [],
   locationMaster: [],
   lastExportDate: null,
-  docs: []
+  docs: [],
+  tenants: [],
+  tenantHouse: {}
 };
 
 function loadDB(){ try{ const d=localStorage.getItem(KEY); if(d) db=JSON.parse(d); }catch(e){} }
@@ -1053,6 +1289,7 @@ function showTab(tab){
   document.getElementById('tab-'+tab).classList.add('active');
   document.getElementById('fab').classList.toggle('visible', tab==='mail');
   document.getElementById('fab-docs').classList.toggle('visible', tab==='docs');
+  document.getElementById('fab-tenant').classList.toggle('visible', tab==='tenant');
 }
 
 // ===== サブ画面 =====
@@ -1863,7 +2100,7 @@ function exportData(){
 function resetData(){
   if(!confirm('⚠️ 全てのデータを削除します。この操作は取り消せません。')) return;
   if(!confirm('本当に削除しますか？')) return;
-  const pin=db.pin; db={pin,mails:[],senders:[],customTags:[],fileMaster:[],locationMaster:[],lastExportDate:null,docs:[]};
+  const pin=db.pin; db={pin,mails:[],senders:[],customTags:[],fileMaster:[],locationMaster:[],lastExportDate:null,docs:[],tenants:[],tenantHouse:{}};
   saveDB(); renderAll(); alert('データを削除しました');
 }
 
@@ -2310,11 +2547,427 @@ function deleteDoc(){
   saveDB(); closeScreen('screen-doc-edit'); renderDocs();
 }
 
+// ===== 賃借人管理 =====
+
+// タイトル生成
+function getTcTitle(tc){
+  const type=tc.type||'新規';
+  const name=tc.tenantName?tc.tenantName+'様':'';
+  const year=tc.start?new Date(tc.start).getFullYear()+'年度':'';
+  return `賃貸契約書 (${type}) ${name} ${year}`.trim();
+}
+
+// 現在の契約判定
+function getCurrentTenant(){
+  if(!db.tenants||db.tenants.length===0) return null;
+  const noStatus=db.tenants.filter(t=>!t.status);
+  if(noStatus.length===0) return null;
+  return noStatus.sort((a,b)=>(b.start||'').localeCompare(a.start||''))[0];
+}
+
+// 一覧レンダリング
+function renderTenantList(){
+  if(!db.tenants) db.tenants=[];
+  const banner=document.getElementById('tenant-alert-banner');
+  // 複数の終了ステータス未選択チェック
+  const noStatus=db.tenants.filter(t=>!t.status);
+  if(noStatus.length>1){
+    banner.innerHTML=`<div class="alert-banner warning">⚠️ 終了ステータスが未選択の契約が${noStatus.length}件あります。確認してください。</div>`;
+  } else { banner.innerHTML=''; }
+
+  const current=getCurrentTenant();
+  const currentList=document.getElementById('tenant-current-list');
+  const currentEmpty=document.getElementById('tenant-current-empty');
+  currentList.innerHTML='';
+  if(current){
+    currentEmpty.style.display='none';
+    currentList.appendChild(makeTcCard(current, true));
+  } else {
+    currentEmpty.style.display='block';
+  }
+
+  const pastList=document.getElementById('tenant-past-list');
+  const pastEmpty=document.getElementById('tenant-past-empty');
+  pastList.innerHTML='';
+  const past=db.tenants
+    .filter(t=>t.id!==(current?.id))
+    .sort((a,b)=>(b.start||'').localeCompare(a.start||''));
+  if(past.length===0){ pastEmpty.style.display='block'; }
+  else { pastEmpty.style.display='none'; past.forEach(t=>pastList.appendChild(makeTcCard(t,false))); }
+}
+
+function makeTcCard(tc, isCurrent){
+  const div=document.createElement('div');
+  div.className='tc-card'+(isCurrent?'':' past');
+  const badge=tc.status==='更新'?`<span class="tc-card-badge tc-badge-renewal">更新済</span>`:
+               tc.status==='退去'?`<span class="tc-card-badge tc-badge-leave">退去済</span>`:
+               isCurrent?`<span class="tc-card-badge tc-badge-current">現在</span>`:'';
+  const period=tc.start&&tc.end?`${tc.start} 〜 ${tc.end}`:'';
+  div.innerHTML=`<div class="tc-card-inner">
+    <div class="tc-card-top"><div class="tc-card-title">${getTcTitle(tc)}</div>${badge}</div>
+    <div class="tc-card-meta">${period}</div>
+    ${tc.rent?`<div class="tc-card-rent">¥${Number(tc.rent).toLocaleString()}/月</div>`:''}
+  </div>`;
+  div.onclick=()=>openTenantDetail(tc.id);
+  return div;
+}
+
+// 詳細画面
+function openTenantDetail(id){
+  const tc=(db.tenants||[]).find(t=>t.id===id); if(!tc) return;
+  document.getElementById('tc-detail-title').textContent=getTcTitle(tc);
+  document.getElementById('screen-tenant-detail').dataset.tcId=id;
+  let html=`<div class="btn-row" style="margin-bottom:1rem;">
+    <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-tenant-detail')">← 戻る</button>
+    <button class="btn btn-primary btn-sm" onclick="openTenantEditFromDetail('${id}')">編集</button>
+    <button class="btn btn-danger btn-sm" onclick="deleteTenantFromDetail('${id}')">削除</button>
+  </div>`;
+
+  // 契約情報
+  html+=`<div class="detail-section"><div class="detail-section-title">📋 契約情報</div>`;
+  html+=`<div class="detail-row"><span class="detail-label">契約種別</span><span class="detail-val">${tc.type||''}</span></div>`;
+  if(tc.date) html+=`<div class="detail-row"><span class="detail-label">契約日</span><span class="detail-val">${tc.date}</span></div>`;
+  html+=`<div class="detail-row"><span class="detail-label">契約開始日</span><span class="detail-val">${tc.start||''}</span></div>`;
+  html+=`<div class="detail-row"><span class="detail-label">契約終了日</span><span class="detail-val">${tc.end||''}</span></div>`;
+  if(tc.start&&tc.end) html+=`<div class="detail-row"><span class="detail-label">契約期間</span><span class="detail-val">${calcPeriodStr(tc.start,tc.end)}</span></div>`;
+  if(tc.rent) html+=`<div class="detail-row"><span class="detail-label">賃料</span><span class="detail-val">¥${Number(tc.rent).toLocaleString()}/月</span></div>`;
+  if(tc.deposit) html+=`<div class="detail-row"><span class="detail-label">敷金</span><span class="detail-val">¥${Number(tc.deposit).toLocaleString()}</span></div>`;
+  if(tc.renewalFee) html+=`<div class="detail-row"><span class="detail-label">更新料</span><span class="detail-val">¥${Number(tc.renewalFee).toLocaleString()}</span></div>`;
+  html+=`<div class="detail-row"><span class="detail-label">紛争防止条例説明書</span><span class="detail-val">${tc.disputeCheck?'✅ 受領済':'未受領'}</span></div>`;
+  if(tc.applicationUrl) html+=`<div class="detail-row"><span class="detail-label">入居申込書</span><span class="detail-val"><a href="${tc.applicationUrl}" target="_blank" rel="noopener" style="color:var(--accent2);">📎 開く</a></span></div>`;
+  html+=`</div>`;
+
+  // 不動産会社
+  if(tc.company||tc.staff){
+    html+=`<div class="detail-section"><div class="detail-section-title">🏢 仲介不動産会社</div>`;
+    if(tc.company) html+=`<div class="detail-row"><span class="detail-label">会社名</span><span class="detail-val">${tc.company}</span></div>`;
+    if(tc.license) html+=`<div class="detail-row"><span class="detail-label">免許番号</span><span class="detail-val">${tc.license}</span></div>`;
+    if(tc.rep) html+=`<div class="detail-row"><span class="detail-label">代表者</span><span class="detail-val">${tc.rep}</span></div>`;
+    if(tc.staff) html+=`<div class="detail-row"><span class="detail-label">担当者</span><span class="detail-val">${tc.staff}</span></div>`;
+    if(tc.tel) html+=`<div class="detail-row"><span class="detail-label">電話</span><span class="detail-val"><a href="tel:${tc.tel}" style="color:var(--accent2);">${tc.tel}</a></span></div>`;
+    if(tc.email) html+=`<div class="detail-row"><span class="detail-label">メール</span><span class="detail-val"><a href="mailto:${tc.email}" style="color:var(--accent2);">${tc.email}</a></span></div>`;
+    if(tc.pdfLinks&&tc.pdfLinks.length>0){
+      html+=`<div style="margin-top:8px;">`;
+      tc.pdfLinks.forEach(l=>{ if(l.url) html+=`<div style="margin-bottom:5px;"><a href="${l.url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;background:var(--accent-light);color:var(--accent2);border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600;text-decoration:none;">📎 ${l.name||'契約書'}</a></div>`; });
+      html+=`</div>`;
+    }
+    html+=`</div>`;
+  }
+
+  // 借家人情報
+  html+=`<div class="detail-section"><div class="detail-section-title">👤 借家人情報</div>`;
+  if(tc.tenantName) html+=`<div class="detail-row"><span class="detail-label">氏名</span><span class="detail-val">${tc.tenantName}</span></div>`;
+  if(tc.tenantBirth) html+=`<div class="detail-row"><span class="detail-label">生年月日</span><span class="detail-val">${tc.tenantBirth}</span></div>`;
+  if(tc.tenantCompany) html+=`<div class="detail-row"><span class="detail-label">勤務先</span><span class="detail-val">${tc.tenantCompany}${tc.tenantPosition?' / '+tc.tenantPosition:''}</span></div>`;
+  if(tc.tenantIncome) html+=`<div class="detail-row"><span class="detail-label">年収</span><span class="detail-val">${tc.tenantIncome}万円</span></div>`;
+  if(tc.tenantCorp) html+=`<div class="detail-row"><span class="detail-label">支払い法人</span><span class="detail-val">${tc.tenantCorp}</span></div>`;
+  if(tc.tenantFamily) html+=`<div class="detail-row"><span class="detail-label">家族構成</span><span class="detail-val">${tc.tenantFamily}</span></div>`;
+  if(tc.tenantEmergency) html+=`<div class="detail-row"><span class="detail-label">緊急連絡先</span><span class="detail-val">${tc.tenantEmergency}</span></div>`;
+  html+=`</div>`;
+
+  // 連帯保証人
+  if(tc.guarantorName){
+    html+=`<div class="detail-section"><div class="detail-section-title">🤝 連帯保証人</div>`;
+    html+=`<div class="detail-row"><span class="detail-label">氏名</span><span class="detail-val">${tc.guarantorName}</span></div>`;
+    if(tc.guarantorAddr) html+=`<div class="detail-row"><span class="detail-label">住所</span><span class="detail-val">${tc.guarantorAddr}</span></div>`;
+    if(tc.guarantorTel) html+=`<div class="detail-row"><span class="detail-label">電話</span><span class="detail-val"><a href="tel:${tc.guarantorTel}" style="color:var(--accent2);">${tc.guarantorTel}</a></span></div>`;
+    if(tc.guarantorCompany) html+=`<div class="detail-row"><span class="detail-label">勤務先</span><span class="detail-val">${tc.guarantorCompany}</span></div>`;
+    html+=`</div>`;
+  }
+
+  // 契約終了ステータス
+  if(tc.status){
+    html+=`<div class="detail-section"><div class="detail-section-title">🔄 契約終了ステータス：${tc.status}</div>`;
+    if(tc.status==='退去'){
+      if(tc.leaveDate) html+=`<div class="detail-row"><span class="detail-label">退去日</span><span class="detail-val">${tc.leaveDate}</span></div>`;
+      if(tc.recoveryLinks&&tc.recoveryLinks.length>0){
+        html+=`<div style="margin-top:8px;">`;
+        tc.recoveryLinks.forEach(l=>{ if(l.url) html+=`<div style="margin-bottom:5px;"><a href="${l.url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;background:var(--accent-light);color:var(--accent2);border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600;text-decoration:none;">📎 ${l.name||'原状回復書類'}</a></div>`; });
+        html+=`</div>`;
+      }
+      const deposit=Number(tc.deposit)||0;
+      const cost=Number(tc.recoveryCost)||0;
+      const refund=deposit-cost;
+      html+=`<div style="background:var(--bg3);border-radius:8px;padding:12px;margin-top:8px;">
+        <div class="detail-row"><span class="detail-label">敷金</span><span class="detail-val">¥${deposit.toLocaleString()}</span></div>
+        <div class="detail-row"><span class="detail-label">原状回復費用</span><span class="detail-val">¥${cost.toLocaleString()}</span></div>
+        <div class="detail-row" style="border-bottom:none;"><span class="detail-label" style="font-weight:700;">返還額</span><span class="detail-val" style="font-size:16px;color:${refund>=0?'var(--success)':'var(--danger)'};">¥${refund.toLocaleString()}</span></div>
+      </div>`;
+    }
+    html+=`</div>`;
+  }
+
+  document.getElementById('tc-detail-content').innerHTML=html;
+  openScreen('screen-tenant-detail');
+}
+
+function calcPeriodStr(start,end){
+  const s=new Date(start), e=new Date(end);
+  const months=(e.getFullYear()-s.getFullYear())*12+(e.getMonth()-s.getMonth());
+  const years=Math.floor(months/12); const rem=months%12;
+  return years>0?`${years}年${rem>0?rem+'ヶ月':''}`:`${rem}ヶ月`;
+}
+
+function openTenantEditFromDetail(id){
+  closeScreen('screen-tenant-detail'); openTenantEdit(id);
+}
+function deleteTenantFromDetail(id){
+  if(!confirm('この契約を削除しますか？')) return;
+  db.tenants=db.tenants.filter(t=>t.id!==id);
+  saveDB(); closeScreen('screen-tenant-detail'); renderTenantList();
+}
+
+// 編集画面
+let tcPdfCount=0, tcRecoveryCount=0;
+
+function calcTcPeriod(){
+  const s=document.getElementById('tc-start').value;
+  const e=document.getElementById('tc-end').value;
+  const disp=document.getElementById('tc-period-display');
+  if(s&&e){ try{ disp.textContent='契約期間：'+calcPeriodStr(s,e); }catch(_){ disp.textContent=''; } }
+  else disp.textContent='';
+}
+
+function calcDeposit(){
+  const deposit=Number(document.getElementById('tc-deposit').value)||0;
+  const cost=Number(document.getElementById('tc-recovery-cost').value)||0;
+  document.getElementById('tc-deposit-display').textContent='¥'+deposit.toLocaleString();
+  const refund=deposit-cost;
+  document.getElementById('tc-refund-display').textContent='¥'+refund.toLocaleString();
+  document.getElementById('tc-refund-display').style.color=refund>=0?'var(--success)':'var(--danger)';
+}
+
+function toggleTcStatus(){
+  const status=document.querySelector('input[name="tc-status"]:checked')?.value||'';
+  document.getElementById('tc-leave-block').style.display=status==='退去'?'block':'none';
+  if(status==='退去') calcDeposit();
+}
+
+function updateTcAppLink(){
+  const url=document.getElementById('tc-application-url').value.trim();
+  const btn=document.getElementById('tc-application-link');
+  if(url){ btn.href=url; btn.style.display='inline-flex'; }
+  else btn.style.display='none';
+}
+
+function openTenantEdit(id){
+  const tc=id?(db.tenants||[]).find(t=>t.id===id):null;
+  document.getElementById('tc-edit-title').textContent=tc?'契約を編集':'契約を追加';
+  document.getElementById('tc-id').value=id||'';
+  // 契約情報
+  const type=tc?.type||'新規';
+  document.getElementById(type==='更新'?'tc-type-renewal':'tc-type-new').checked=true;
+  document.getElementById('tc-date').value=tc?.date||'';
+  document.getElementById('tc-start').value=tc?.start||'';
+  document.getElementById('tc-end').value=tc?.end||'';
+  calcTcPeriod();
+  document.getElementById('tc-rent').value=tc?.rent||'';
+  document.getElementById('tc-deposit').value=tc?.deposit||'';
+  document.getElementById('tc-renewal-fee').value=tc?.renewalFee||'';
+  document.getElementById('tc-dispute-check').checked=!!(tc?.disputeCheck);
+  document.getElementById('tc-application-url').value=tc?.applicationUrl||'';
+  updateTcAppLink();
+  // エラー非表示
+  document.getElementById('tc-start-err').style.display='none';
+  document.getElementById('tc-end-err').style.display='none';
+  // 不動産会社
+  document.getElementById('tc-company').value=tc?.company||'';
+  document.getElementById('tc-license').value=tc?.license||'';
+  document.getElementById('tc-rep').value=tc?.rep||'';
+  document.getElementById('tc-staff').value=tc?.staff||'';
+  document.getElementById('tc-tel').value=tc?.tel||'';
+  document.getElementById('tc-email').value=tc?.email||'';
+  document.getElementById('tc-pdf-links').innerHTML=''; tcPdfCount=0; pdfRowCount=0;
+  if(tc?.pdfLinks?.length>0) tc.pdfLinks.forEach(l=>addPdfLinkRow('tc-pdf-links',l.name,l.url));
+  // 借家人情報
+  document.getElementById('tc-tenant-name').value=tc?.tenantName||'';
+  document.getElementById('tc-tenant-birth').value=tc?.tenantBirth||'';
+  document.getElementById('tc-tenant-company').value=tc?.tenantCompany||'';
+  document.getElementById('tc-tenant-position').value=tc?.tenantPosition||'';
+  document.getElementById('tc-tenant-income').value=tc?.tenantIncome||'';
+  document.getElementById('tc-tenant-corp').value=tc?.tenantCorp||'';
+  document.getElementById('tc-tenant-family').value=tc?.tenantFamily||'';
+  document.getElementById('tc-tenant-emergency').value=tc?.tenantEmergency||'';
+  // 連帯保証人
+  document.getElementById('tc-guarantor-name').value=tc?.guarantorName||'';
+  document.getElementById('tc-guarantor-addr').value=tc?.guarantorAddr||'';
+  document.getElementById('tc-guarantor-tel').value=tc?.guarantorTel||'';
+  document.getElementById('tc-guarantor-company').value=tc?.guarantorCompany||'';
+  // ステータス
+  const status=tc?.status||'';
+  document.querySelectorAll('input[name="tc-status"]').forEach(r=>r.checked=r.value===status);
+  document.getElementById('tc-leave-block').style.display=status==='退去'?'block':'none';
+  document.getElementById('tc-leave-date').value=tc?.leaveDate||'';
+  document.getElementById('tc-recovery-links').innerHTML=''; pdfRowCount=0;
+  if(tc?.recoveryLinks?.length>0) tc.recoveryLinks.forEach(l=>addPdfLinkRow('tc-recovery-links',l.name,l.url));
+  document.getElementById('tc-recovery-cost').value=tc?.recoveryCost||'';
+  if(status==='退去') calcDeposit();
+  document.getElementById('tc-del-btn').style.display=id?'inline-block':'none';
+  openScreen('screen-tenant-edit');
+}
+
+function saveTenant(){
+  const start=document.getElementById('tc-start').value;
+  const end=document.getElementById('tc-end').value;
+  let valid=true;
+  if(!start){ document.getElementById('tc-start-err').style.display='block'; valid=false; }
+  if(!end){ document.getElementById('tc-end-err').style.display='block'; valid=false; }
+  if(!valid) return;
+  const id=document.getElementById('tc-id').value||Date.now().toString();
+  const status=document.querySelector('input[name="tc-status"]:checked')?.value||'';
+  const deposit=Number(document.getElementById('tc-deposit').value)||0;
+  const cost=Number(document.getElementById('tc-recovery-cost').value)||0;
+  const rec={
+    id,
+    type: document.querySelector('input[name="tc-type"]:checked')?.value||'新規',
+    date: document.getElementById('tc-date').value,
+    start, end,
+    rent: document.getElementById('tc-rent').value,
+    deposit: document.getElementById('tc-deposit').value,
+    renewalFee: document.getElementById('tc-renewal-fee').value,
+    disputeCheck: document.getElementById('tc-dispute-check').checked,
+    applicationUrl: document.getElementById('tc-application-url').value.trim(),
+    company: document.getElementById('tc-company').value.trim(),
+    license: document.getElementById('tc-license').value.trim(),
+    rep: document.getElementById('tc-rep').value.trim(),
+    staff: document.getElementById('tc-staff').value.trim(),
+    tel: document.getElementById('tc-tel').value.trim(),
+    email: document.getElementById('tc-email').value.trim(),
+    pdfLinks: getPdfLinks('tc-pdf-links'),
+    tenantName: document.getElementById('tc-tenant-name').value.trim(),
+    tenantBirth: document.getElementById('tc-tenant-birth').value,
+    tenantCompany: document.getElementById('tc-tenant-company').value.trim(),
+    tenantPosition: document.getElementById('tc-tenant-position').value.trim(),
+    tenantIncome: document.getElementById('tc-tenant-income').value,
+    tenantCorp: document.getElementById('tc-tenant-corp').value.trim(),
+    tenantFamily: document.getElementById('tc-tenant-family').value.trim(),
+    tenantEmergency: document.getElementById('tc-tenant-emergency').value.trim(),
+    guarantorName: document.getElementById('tc-guarantor-name').value.trim(),
+    guarantorAddr: document.getElementById('tc-guarantor-addr').value.trim(),
+    guarantorTel: document.getElementById('tc-guarantor-tel').value.trim(),
+    guarantorCompany: document.getElementById('tc-guarantor-company').value.trim(),
+    status,
+    leaveDate: document.getElementById('tc-leave-date').value,
+    recoveryLinks: getPdfLinks('tc-recovery-links'),
+    recoveryCost: cost,
+    refund: deposit-cost,
+  };
+  // 更新選択時は新レコードを自動作成
+  if(status==='更新' && !document.getElementById('tc-id').value){
+    // 既存IDの場合は更新のみ
+  }
+  if(!db.tenants) db.tenants=[];
+  const idx=db.tenants.findIndex(t=>t.id===id);
+  if(idx>=0) db.tenants[idx]=rec; else db.tenants.push(rec);
+  // 更新選択時は新しい契約を自動作成してそちらに遷移
+  if(status==='更新'){
+    const newId=Date.now().toString()+'_r';
+    const newRec={...rec, id:newId, type:'更新', date:'', start:'', end:'', status:'', leaveDate:'', recoveryLinks:[], recoveryCost:0, refund:0, pdfLinks:[], applicationUrl:'', disputeCheck:false};
+    db.tenants.push(newRec);
+    saveDB(); closeScreen('screen-tenant-edit'); renderTenantList();
+    openTenantEdit(newId);
+    return;
+  }
+  saveDB(); closeScreen('screen-tenant-edit'); renderTenantList();
+  openTenantDetail(id);
+}
+
+function deleteTenant(){
+  const id=document.getElementById('tc-id').value;
+  if(!id||!confirm('この契約を削除しますか？')) return;
+  db.tenants=db.tenants.filter(t=>t.id!==id);
+  saveDB(); closeScreen('screen-tenant-edit'); renderTenantList();
+}
+
+// ===== 貸家情報 =====
+let thKeyCount=0;
+function openTenantHouse(){
+  const h=db.tenantHouse||{};
+  document.getElementById('th-addr').value=h.addr||'';
+  document.getElementById('th-area').value=h.area||'';
+  document.getElementById('th-facilities').value=h.facilities||'';
+  document.getElementById('th-parking').value=h.parking||'';
+  document.getElementById('th-comment').value=h.comment||'';
+  // 間取り写真
+  thSetSlot('th-madori-slot', h.madori||'', 'th-madori-input');
+  thSetSlot('th-gaikan-slot', h.gaikan||'', 'th-gaikan-input');
+  // 鍵情報
+  document.getElementById('th-keys').innerHTML=''; thKeyCount=0;
+  if(h.keys&&h.keys.length>0) h.keys.forEach(k=>addThKeyRow(k.type,k.date,k.owner,k.ownerOther));
+  openScreen('screen-tenant-house');
+}
+
+function thSetSlot(slotId, src, inputId){
+  const slot=document.getElementById(slotId); slot.innerHTML='';
+  if(src){
+    const img=document.createElement('img'); img.src=src; img.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:9px;cursor:zoom-in;';
+    img.onclick=e=>{ e.stopPropagation(); openLightbox(src); };
+    const del=document.createElement('button'); del.className='img-del'; del.textContent='✕'; del.style.display='flex';
+    del.onclick=e=>{ e.stopPropagation(); thSetSlot(slotId,'',inputId); };
+    slot.appendChild(img); slot.appendChild(del);
+    slot.dataset.img=src; slot.onclick=null;
+  } else {
+    slot.innerHTML=`<div class="img-icon">📷</div><div class="img-label">${slotId.includes('madori')?'間取り':'外観'}</div>`;
+    slot.dataset.img=''; slot.onclick=()=>document.getElementById(inputId).click();
+  }
+}
+
+function thPhotoSelect(input, slotId){
+  const file=input.files[0]; if(!file) return;
+  const inputId=input.id;
+  compressImage(file).then(src=>{ thSetSlot(slotId,src,inputId); input.value=''; });
+}
+
+function addThKeyRow(type='',date='',owner='大家',ownerOther=''){
+  const wrap=document.getElementById('th-keys');
+  const id='thk-'+thKeyCount++;
+  const div=document.createElement('div'); div.className='pw-row'; div.id=id;
+  div.innerHTML=`
+    <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;">
+      <input type="text" placeholder="鍵の種類（例：玄関）" value="${type}" style="padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;width:100%;">
+      <input type="date" value="${date}" style="padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;width:100%;">
+      <button class="btn-del-row" onclick="document.getElementById('${id}').remove()">✕</button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="radio" name="owner-${id}" value="大家" ${owner==='大家'?'checked':''}> 大家</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="radio" name="owner-${id}" value="不動産会社" ${owner==='不動産会社'?'checked':''}> 不動産会社</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="radio" name="owner-${id}" value="賃借人" ${owner==='賃借人'?'checked':''}> 賃借人</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="radio" name="owner-${id}" value="その他" ${owner==='その他'?'checked':''}> その他</label>
+      <input type="text" placeholder="その他の場合" value="${ownerOther}" style="flex:1;min-width:80px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:#fff;">
+    </div>
+  `;
+  wrap.appendChild(div);
+}
+
+function getThKeys(){
+  return [...document.getElementById('th-keys').querySelectorAll('.pw-row')].map(r=>{
+    const ins=r.querySelectorAll('input[type=text],input[type=date]');
+    const ownerChecked=r.querySelector('input[type=radio]:checked');
+    return { type:ins[0]?.value.trim()||'', date:ins[1]?.value||'', owner:ownerChecked?.value||'大家', ownerOther:ins[2]?.value.trim()||'' };
+  });
+}
+
+function saveTenantHouse(){
+  db.tenantHouse={
+    addr: document.getElementById('th-addr').value.trim(),
+    area: document.getElementById('th-area').value.trim(),
+    facilities: document.getElementById('th-facilities').value.trim(),
+    parking: document.getElementById('th-parking').value.trim(),
+    comment: document.getElementById('th-comment').value.trim(),
+    madori: document.getElementById('th-madori-slot').dataset.img||'',
+    gaikan: document.getElementById('th-gaikan-slot').dataset.img||'',
+    keys: getThKeys(),
+  };
+  saveDB(); closeScreen('screen-tenant-house');
+  alert('✓ 貸家情報を保存しました');
+}
+
 // ===== 全体レンダリング =====
 function renderAll(){
   buildFilterUI();
   renderMailList();
   renderDocs();
+  renderTenantList();
   checkAlerts();
   updateSettingsCounts();
   checkBackupReminder();
