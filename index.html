@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>母の管理アプリ</title>
+<title>馬場みね子　情報管理アプリ</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -185,9 +185,10 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 .sub-screen{position:fixed;inset:0;background:var(--bg);z-index:500;display:none;flex-direction:column;max-width:600px;margin:0 auto;}
 .sub-screen.active{display:flex;}
 .sub-header{background:var(--accent2);color:#fff;padding:.9rem 1.25rem .75rem;display:flex;align-items:center;gap:12px;flex-shrink:0;}
-.sub-back{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0;line-height:1;}
+.sub-back-btn{background:rgba(255,255,255,.18);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;padding:6px 12px;border-radius:20px;font-family:inherit;flex-shrink:0;}
 .sub-title{font-size:16px;font-weight:700;flex:1;}
-.sub-content{flex:1;overflow-y:auto;padding:1rem 1rem 5rem;}
+.sub-content{flex:1;overflow-y:auto;padding:1rem 1rem 2rem;}
+.sub-btn-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:.6rem 1rem;display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;}
 
 /* セパレーター */
 .divider{height:1px;background:var(--border);margin:14px 0;}
@@ -286,6 +287,22 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 .tc-badge-leave{background:var(--bg3);color:var(--text3);}
 .tc-card-meta{font-size:12px;color:var(--text2);}
 .tc-card-rent{font-size:14px;font-weight:700;color:var(--accent2);margin-top:4px;}
+/* 確定申告 */
+.yr-btn{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:14px;cursor:pointer;font-family:inherit;}
+.yr-label{font-size:16px;font-weight:700;color:var(--accent2);flex:1;text-align:center;}
+.mtable{width:100%;border-collapse:collapse;font-size:13px;}
+.mtable th{background:var(--bg3);padding:8px 6px;text-align:center;font-weight:600;color:var(--text2);white-space:nowrap;}
+.mtable td{padding:9px 6px;border-bottom:1px solid var(--bg3);text-align:right;white-space:nowrap;}
+.mtable td:first-child{text-align:left;color:var(--text2);}
+.mtable tr.total-row td{font-weight:700;background:var(--accent-light);color:var(--accent2);border-top:2px solid var(--accent);}
+.mtable .cell-link{cursor:pointer;color:var(--accent2);text-decoration:underline dotted;}
+.tax-status-done{background:var(--success-light);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;color:var(--success);}
+.tax-status-pending{background:var(--bg3);border-radius:10px;padding:12px;font-size:13px;color:var(--text2);}
+.tax-personal-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bg3);font-size:13px;}
+.tax-personal-row:last-child{border-bottom:none;}
+.tax-personal-label{color:var(--text2);}
+.tax-personal-val{font-weight:700;color:var(--text);}
+
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
@@ -296,8 +313,8 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <!-- ===== PIN ===== -->
 <div id="pin-screen">
   <div class="pin-logo">📬</div>
-  <div class="pin-title">母の管理アプリ</div>
-  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v4.0</div>
+  <div class="pin-title">馬場みね子　情報管理アプリ</div>
+  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v4.2</div>
   <p id="pin-prompt">PINコードを入力してください</p>
   <div class="pin-dots">
     <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
@@ -326,7 +343,7 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
   <div class="app-header">
     <div class="header-left">
       <span>📬</span>
-      <span class="header-title">母の管理アプリ</span>
+      <span class="header-title">馬場みね子　情報管理アプリ</span>
       <span class="header-badge" id="header-badge"></span>
     </div>
     <button class="lock-btn" onclick="lockApp()">🔒 ロック</button>
@@ -334,8 +351,8 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
   <div class="tab-bar">
     <button class="tab-btn active" id="tab-mail" onclick="showTab('mail')">📮 郵便記録</button>
     <button class="tab-btn" id="tab-docs" onclick="showTab('docs')">📄 重要書類</button>
-    <button class="tab-btn" id="tab-tenant" onclick="showTab('tenant')">🏠 賃借人</button>
-    <button class="tab-btn" id="tab-tax" onclick="showTab('tax')">🧾 白色申告</button>
+    <button class="tab-btn" id="tab-tenant" onclick="showTab('tenant')">🏠 賃貸契約</button>
+    <button class="tab-btn" id="tab-tax" onclick="showTab('tax')">🧾 確定申告</button>
     <button class="tab-btn" id="tab-settings" onclick="showTab('settings')">⚙️ 設定</button>
   </div>
   <div class="content">
@@ -420,7 +437,49 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
       </div>
     </div>
 
-    <!-- ===== 設定ページ ===== -->
+    <!-- ===== 確定申告ページ ===== -->
+    <div id="page-tax" class="page">
+      <div id="tax-alert-banner"></div>
+
+      <!-- 外部リンク -->
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <a href="https://www.keisan.nta.go.jp/" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--accent2);color:#fff;border-radius:10px;padding:10px;font-size:12px;font-weight:700;text-decoration:none;min-width:100px;">🖥️ 確定申告作成</a>
+        <a href="https://www.nta.go.jp/about/organization/tokyo/location/tokyo/setagaya/index.htm" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--accent);color:#fff;border-radius:10px;padding:10px;font-size:12px;font-weight:700;text-decoration:none;min-width:100px;">🏛️ 世田谷税務署</a>
+        <a href="https://myna.go.jp/" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--success);color:#fff;border-radius:10px;padding:10px;font-size:12px;font-weight:700;text-decoration:none;min-width:100px;">🪪 マイナポータル</a>
+      </div>
+
+      <!-- 年度切り替え -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        <button class="yr-btn" onclick="changeTaxYear(-1)">◀</button>
+        <div class="yr-label" id="tax-yr-label"></div>
+        <button class="yr-btn" onclick="changeTaxYear(1)">▶</button>
+      </div>
+
+      <!-- マイナンバー・年金番号 -->
+      <div class="section-block" id="tax-header-info"></div>
+
+      <!-- 確定申告ステータス -->
+      <div class="section-block">
+        <div class="section-block-title">📋 申告ステータス</div>
+        <div id="tax-status-display"></div>
+      </div>
+
+      <!-- 不動産収支表 -->
+      <div class="section-block">
+        <div class="section-block-title">🏠 不動産収支</div>
+        <div id="tax-income-summary" style="margin-bottom:10px;"></div>
+        <div style="overflow-x:auto;">
+          <table class="mtable" id="tax-table"></table>
+        </div>
+      </div>
+
+      <!-- 個人収支 -->
+      <div class="section-block">
+        <div class="section-block-title">👤 個人収支</div>
+        <div id="tax-personal"></div>
+      </div>
+
+    </div>
     <div id="page-settings" class="page">
       <div class="sec-title">アカウント</div>
       <div class="setting-item" onclick="openPinChange()">
@@ -505,8 +564,12 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <!-- ===== 貸家情報画面 ===== -->
 <div class="sub-screen" id="screen-tenant-house">
   <div class="sub-header">
-    <button class="sub-back" onclick="closeScreen('screen-tenant-house')">←</button>
+    <button class="sub-back-btn" onclick="closeScreen('screen-tenant-house')">戻る</button>
     <div class="sub-title">🏠 貸家情報</div>
+  </div>
+  <div class="sub-btn-bar">
+    <button class="btn btn-primary btn-sm" onclick="saveTenantHouse()">保存する</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-tenant-house')">閉じる</button>
   </div>
   <div class="sub-content">
     <div class="section-block">
@@ -541,10 +604,6 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
       <div id="th-keys"></div>
       <button class="btn-add-row" onclick="addThKeyRow()">＋ 鍵を追加</button>
     </div>
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="saveTenantHouse()">保存する</button>
-      <button class="btn btn-secondary" onclick="closeScreen('screen-tenant-house')">閉じる</button>
-    </div>
   </div>
 </div>
 
@@ -559,8 +618,13 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <!-- ===== 賃借人契約 編集画面 ===== -->
 <div class="sub-screen" id="screen-tenant-edit">
   <div class="sub-header">
-    <button class="sub-back" onclick="closeScreen('screen-tenant-edit')">←</button>
+    <button class="sub-back-btn" onclick="closeScreen('screen-tenant-edit')">戻る</button>
     <div class="sub-title" id="tc-edit-title">契約を追加</div>
+  </div>
+  <div class="sub-btn-bar">
+    <button class="btn btn-primary btn-sm" onclick="saveTenant()">保存する</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-tenant-edit')">キャンセル</button>
+    <button class="btn btn-danger btn-sm" id="tc-del-btn" onclick="deleteTenant()" style="display:none;">削除</button>
   </div>
   <div class="sub-content">
     <input type="hidden" id="tc-id">
@@ -637,7 +701,7 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
     <div class="section-block">
       <div class="section-block-title">👤 借家人情報</div>
       <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;">
-        <div class="fg"><label class="fl">氏名 *</label><input type="text" class="fi" id="tc-tenant-name" placeholder="例：末廣英之"></div>
+        <div class="fg"><label class="fl">氏名 *</label><input type="text" class="fi" id="tc-tenant-name" placeholder="例：山田太郎"></div>
         <div class="fg"><label class="fl">生年月日</label><input type="date" class="fi" id="tc-tenant-birth"></div>
       </div>
       <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;">
@@ -701,10 +765,126 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
       </div>
     </div>
 
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="saveTenant()">保存する</button>
-      <button class="btn btn-secondary" onclick="closeScreen('screen-tenant-edit')">キャンセル</button>
-      <button class="btn btn-danger btn-sm" id="tc-del-btn" onclick="deleteTenant()" style="display:none;">削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 月次収支入力画面 ===== -->
+<div class="sub-screen" id="screen-tax-month">
+  <div class="sub-header">
+    <button class="sub-back-btn" onclick="closeScreen('screen-tax-month')">戻る</button>
+    <div class="sub-title" id="tax-month-title">月次収支入力</div>
+  </div>
+  <div class="sub-btn-bar">
+    <button class="btn btn-primary btn-sm" onclick="saveTaxMonth()">保存する</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-tax-month')">キャンセル</button>
+  </div>
+  <div class="sub-content">
+    <input type="hidden" id="tm-year">
+    <input type="hidden" id="tm-month">
+    <div class="section-block">
+      <div class="section-block-title">💴 収支入力</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="fg"><label class="fl">家賃収入（円）</label><input type="number" inputmode="numeric" class="fi" id="tm-rent" placeholder="0"></div>
+        <div class="fg"><label class="fl">地代（円）</label><input type="number" inputmode="numeric" class="fi" id="tm-land" placeholder="0"></div>
+        <div class="fg"><label class="fl">管理費（円）</label><input type="number" inputmode="numeric" class="fi" id="tm-mgmt" placeholder="0"></div>
+        <div class="fg"><label class="fl">修繕費（円）</label><input type="number" inputmode="numeric" class="fi" id="tm-repair" placeholder="0"></div>
+      </div>
+      <div class="fg"><label class="fl">その他支出（円）</label><input type="number" inputmode="numeric" class="fi" id="tm-other" placeholder="0"></div>
+      <div class="fg"><label class="fl">不動産工房 報告メール受信日</label><input type="date" class="fi" id="tm-report-date"></div>
+      <div class="fg"><label class="fl">メモ</label><textarea class="fi" id="tm-memo" placeholder="経費の内訳など"></textarea></div>
+    </div>
+    <div class="section-block">
+      <div class="section-block-title">📎 関連書類リンク</div>
+      <div id="tm-pdf-links"></div>
+      <button class="btn-add-row" onclick="addPdfLinkRow('tm-pdf-links')">＋ リンクを追加</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 確定申告ステータス編集画面 ===== -->
+<div class="sub-screen" id="screen-tax-status">
+  <div class="sub-header">
+    <button class="sub-back-btn" onclick="closeScreen('screen-tax-status')">戻る</button>
+    <div class="sub-title" id="tax-status-title">申告ステータス</div>
+  </div>
+  <div class="sub-btn-bar">
+    <button class="btn btn-primary btn-sm" onclick="saveTaxStatus()">保存する</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-tax-status')">キャンセル</button>
+  </div>
+  <div class="sub-content">
+    <input type="hidden" id="ts-year">
+    <div class="section-block">
+      <div class="section-block-title">📋 申告情報</div>
+      <div class="fg">
+        <label class="fl">申告種別</label>
+        <div style="display:flex;gap:8px;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;padding:10px;border:1.5px solid var(--border);border-radius:8px;flex:1;background:var(--bg4);">
+            <input type="radio" name="ts-type" value="白色申告" id="ts-type-white" checked> 白色申告
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;padding:10px;border:1.5px solid var(--border);border-radius:8px;flex:1;background:var(--bg4);">
+            <input type="radio" name="ts-type" value="青色申告" id="ts-type-blue"> 青色申告
+          </label>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="fg"><label class="fl">提出期間 開始</label><input type="date" class="fi" id="ts-period-start"></div>
+        <div class="fg"><label class="fl">提出期間 終了</label><input type="date" class="fi" id="ts-period-end"></div>
+      </div>
+      <div class="fg">
+        <label class="fl">確定申告年月日（入力で提出済みに）</label>
+        <input type="date" class="fi" id="ts-submit-date">
+      </div>
+      <div class="fg">
+        <label class="fl">納税額（マイナスで還付）</label>
+        <input type="number" inputmode="numeric" class="fi" id="ts-tax-amount" placeholder="例：15000（還付の場合は-15000）">
+      </div>
+      <div class="fg"><label class="fl">メモ</label><textarea class="fi" id="ts-memo" placeholder="備考・メモ"></textarea></div>
+    </div>
+    <div class="section-block">
+      <div class="section-block-title">📎 関連書類リンク</div>
+      <div id="ts-pdf-links"></div>
+      <button class="btn-add-row" onclick="addPdfLinkRow('ts-pdf-links')">＋ リンクを追加</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 個人収支編集画面 ===== -->
+<div class="sub-screen" id="screen-tax-personal">
+  <div class="sub-header">
+    <button class="sub-back-btn" onclick="closeScreen('screen-tax-personal')">戻る</button>
+    <div class="sub-title" id="tax-personal-title">個人収支入力</div>
+  </div>
+  <div class="sub-btn-bar">
+    <button class="btn btn-primary btn-sm" onclick="saveTaxPersonal()">保存する</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-tax-personal')">キャンセル</button>
+  </div>
+  <div class="sub-content">
+    <input type="hidden" id="tp-year">
+    <div class="section-block">
+      <div class="section-block-title">💴 本人年金</div>
+      <div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:10px;font-size:13px;color:var(--text2);">
+        種別：老齢基礎年金　生年月日：昭和14年1月31日
+      </div>
+      <div class="fg"><label class="fl">年間収入金額（円）</label><input type="number" inputmode="numeric" class="fi" id="tp-pension" placeholder="0"></div>
+    </div>
+    <div class="section-block">
+      <div class="section-block-title">🏥 社会保険料（源泉徴収）</div>
+      <div class="fg"><label class="fl">介護保険料額（円）</label><input type="number" inputmode="numeric" class="fi" id="tp-care" placeholder="0" oninput="calcSocialInsurance()"></div>
+      <div class="fg"><label class="fl">後期高齢者医療保険料額（円）</label><input type="number" inputmode="numeric" class="fi" id="tp-medical" placeholder="0" oninput="calcSocialInsurance()"></div>
+      <div style="background:var(--accent-light);border-radius:8px;padding:10px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:13px;font-weight:600;color:var(--accent2);">社会保険料の額（合計）</span>
+        <span style="font-size:16px;font-weight:700;color:var(--accent2);" id="tp-social-total">¥0</span>
+      </div>
+    </div>
+    <div class="section-block">
+      <div class="section-block-title">🏥 医療費</div>
+      <div class="fg"><label class="fl">年間医療費合計（円）</label><input type="number" inputmode="numeric" class="fi" id="tp-medical-fee" placeholder="0"></div>
+    </div>
+    <div class="section-block">
+      <div class="section-block-title">🛡️ 損害保険料</div>
+      <div id="tp-insurance-ref" style="margin-bottom:8px;"></div>
+      <div class="fg"><label class="fl">年間払込予定額（円）</label><input type="number" inputmode="numeric" class="fi" id="tp-insurance" placeholder="0"></div>
     </div>
   </div>
 </div>
@@ -712,8 +892,13 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <!-- ===== 郵便物 詳細・編集画面 ===== -->
 <div class="sub-screen" id="screen-mail-edit">
   <div class="sub-header">
-    <button class="sub-back" onclick="closeMailEdit()">←</button>
+    <button class="sub-back-btn" onclick="closeMailEdit()">戻る</button>
     <div class="sub-title" id="mail-edit-title">郵便物を記録</div>
+  </div>
+  <div class="sub-btn-bar">
+    <button class="btn btn-primary btn-sm" onclick="saveMail()">保存する</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeMailEdit()">キャンセル</button>
+    <button class="btn btn-danger btn-sm" id="me-del-btn" onclick="deleteMail()" style="display:none;">削除</button>
   </div>
   <div class="sub-content">
     <input type="hidden" id="me-id">
@@ -867,19 +1052,13 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
         </div>
       </div>
     </div>
-
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="saveMail()">保存する</button>
-      <button class="btn btn-secondary" onclick="closeMailEdit()">キャンセル</button>
-      <button class="btn btn-danger btn-sm" id="me-del-btn" onclick="deleteMail()" style="display:none;">削除</button>
-    </div>
   </div>
 </div>
 
 <!-- ===== ファイル名マスタ ===== -->
 <div class="sub-screen" id="screen-file-master">
   <div class="sub-header">
-    <button class="sub-back" onclick="closeScreen('screen-file-master')">←</button>
+    <button class="sub-back-btn" onclick="closeScreen('screen-file-master')">戻る</button>
     <div class="sub-title">ファイル名マスタ</div>
   </div>
   <div class="sub-content">
@@ -899,7 +1078,7 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <!-- ===== 保管場所マスタ ===== -->
 <div class="sub-screen" id="screen-location-master">
   <div class="sub-header">
-    <button class="sub-back" onclick="closeScreen('screen-location-master')">←</button>
+    <button class="sub-back-btn" onclick="closeScreen('screen-location-master')">戻る</button>
     <div class="sub-title">保管場所マスタ</div>
   </div>
   <div class="sub-content">
@@ -927,17 +1106,16 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <!-- ===== 重要書類 編集画面 ===== -->
 <div class="sub-screen" id="screen-doc-edit">
   <div class="sub-header">
-    <button class="sub-back" onclick="closeScreen('screen-doc-edit')">←</button>
+    <button class="sub-back-btn" onclick="closeScreen('screen-doc-edit')">戻る</button>
     <div class="sub-title" id="doc-edit-title">書類を追加</div>
+  </div>
+  <div class="sub-btn-bar">
+    <button class="btn btn-primary btn-sm" onclick="saveDoc()">保存する</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-doc-edit')">キャンセル</button>
+    <button class="btn btn-danger btn-sm" id="de-del-btn" onclick="deleteDoc()" style="display:none;">削除</button>
   </div>
   <div class="sub-content">
     <input type="hidden" id="de-id">
-
-    <!-- プリセット -->
-    <div class="section-block" id="de-preset-block">
-      <div class="section-block-title">📋 プリセットから選ぶ</div>
-      <div id="de-presets" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
-    </div>
 
     <!-- 基本情報 -->
     <div class="section-block">
@@ -1035,20 +1213,18 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
       <div class="section-block-title">📷 写真（最大4枚）</div>
       <div class="img-upload-grid" id="de-photos"></div>
     </div>
-
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="saveDoc()">保存する</button>
-      <button class="btn btn-secondary" onclick="closeScreen('screen-doc-edit')">キャンセル</button>
-      <button class="btn btn-danger btn-sm" id="de-del-btn" onclick="deleteDoc()" style="display:none;">削除</button>
-    </div>
   </div>
 </div>
 
 <!-- ===== インポート ===== -->
 <div class="sub-screen" id="screen-import">
   <div class="sub-header">
-    <button class="sub-back" onclick="closeScreen('screen-import')">←</button>
+    <button class="sub-back-btn" onclick="closeScreen('screen-import')">戻る</button>
     <div class="sub-title">データをインポート</div>
+  </div>
+  <div class="sub-btn-bar">
+    <button class="btn btn-primary btn-sm" id="import-exec-btn" onclick="executeImport()" style="display:none;">インポート実行</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-import')">キャンセル</button>
   </div>
   <div class="sub-content">
     <div class="section-block">
@@ -1079,13 +1255,9 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
         <label class="fl">JSONファイルを選択</label>
         <input type="file" accept=".json" class="fi" id="import-file" onchange="previewImport()">
       </div>
-      <div id="import-preview" style="display:none;" class="section-block" style="background:var(--bg3);">
+      <div id="import-preview" style="display:none;" class="section-block">
         <div class="section-block-title">📊 インポート内容の確認</div>
         <div id="import-preview-content" style="font-size:13px;color:var(--text2);line-height:1.8;"></div>
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" id="import-exec-btn" onclick="executeImport()" style="display:none;">インポート実行</button>
-        <button class="btn btn-secondary" onclick="closeScreen('screen-import')">キャンセル</button>
       </div>
     </div>
   </div>
@@ -1094,18 +1266,18 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <!-- ===== PIN変更画面 ===== -->
 <div class="sub-screen" id="screen-pin-change">
   <div class="sub-header">
-    <button class="sub-back" onclick="closeScreen('screen-pin-change')">←</button>
+    <button class="sub-back-btn" onclick="closeScreen('screen-pin-change')">戻る</button>
     <div class="sub-title">PINコードの変更</div>
+  </div>
+  <div class="sub-btn-bar">
+    <button class="btn btn-primary btn-sm" onclick="changePin()">変更する</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-pin-change')">閉じる</button>
   </div>
   <div class="sub-content">
     <div class="section-block">
       <div class="fg"><label class="fl">新しいPIN（4桁）</label><input type="password" inputmode="numeric" maxlength="4" class="fi" id="new-pin" placeholder="4桁の数字"></div>
       <div class="fg"><label class="fl">確認（もう一度）</label><input type="password" inputmode="numeric" maxlength="4" class="fi" id="confirm-pin" placeholder="4桁の数字"></div>
-      <div id="pin-change-msg" style="font-size:13px;min-height:18px;margin-bottom:10px;"></div>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="changePin()">変更する</button>
-        <button class="btn btn-secondary" onclick="closeScreen('screen-pin-change')">閉じる</button>
-      </div>
+      <div id="pin-change-msg" style="font-size:13px;min-height:18px;"></div>
     </div>
   </div>
 </div>
@@ -1113,7 +1285,7 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <!-- ===== 差出人マスタ画面 ===== -->
 <div class="sub-screen" id="screen-sender-master">
   <div class="sub-header">
-    <button class="sub-back" onclick="closeScreen('screen-sender-master')">←</button>
+    <button class="sub-back-btn" onclick="closeScreen('screen-sender-master')">戻る</button>
     <div class="sub-title">差出人マスタ</div>
   </div>
   <div class="sub-content">
@@ -1155,7 +1327,7 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <!-- ===== 自由タグ管理画面 ===== -->
 <div class="sub-screen" id="screen-tag-master">
   <div class="sub-header">
-    <button class="sub-back" onclick="closeScreen('screen-tag-master')">←</button>
+    <button class="sub-back-btn" onclick="closeScreen('screen-tag-master')">戻る</button>
     <div class="sub-title">自由タグ管理</div>
   </div>
   <div class="sub-content">
@@ -1175,7 +1347,7 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 
 <script>
 // ===== データ管理 =====
-const KEY = 'haha_app_v1';
+const KEY = 'babaminekoapp_v1';
 let db = {
   pin: null,
   mails: [],
@@ -1186,7 +1358,8 @@ let db = {
   lastExportDate: null,
   docs: [],
   tenants: [],
-  tenantHouse: {}
+  tenantHouse: {},
+  taxData: {}
 };
 
 function loadDB(){ try{ const d=localStorage.getItem(KEY); if(d) db=JSON.parse(d); }catch(e){} }
@@ -2094,13 +2267,13 @@ function exportData(){
   saveDB();
   const blob=new Blob([JSON.stringify({...db,pin:'(hidden)'},null,2)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download=`haha_app_${new Date().toISOString().slice(0,10)}.json`; a.click();
+  a.download=`babaminekoapp_${new Date().toISOString().slice(0,10)}.json`; a.click();
   updateSettingsCounts();
 }
 function resetData(){
   if(!confirm('⚠️ 全てのデータを削除します。この操作は取り消せません。')) return;
   if(!confirm('本当に削除しますか？')) return;
-  const pin=db.pin; db={pin,mails:[],senders:[],customTags:[],fileMaster:[],locationMaster:[],lastExportDate:null,docs:[],tenants:[],tenantHouse:{}};
+  const pin=db.pin; db={pin,mails:[],senders:[],customTags:[],fileMaster:[],locationMaster:[],lastExportDate:null,docs:[],tenants:[],tenantHouse:{},taxData:{}};
   saveDB(); renderAll(); alert('データを削除しました');
 }
 
@@ -2365,21 +2538,6 @@ function deleteDocFromDetail(id){
 // ===== 編集画面 =====
 let deNumCount=0, dePwCount=0, dePdfCount=0;
 
-function buildDePresets(){
-  const wrap=document.getElementById('de-presets'); wrap.innerHTML='';
-  DOC_PRESETS.forEach(p=>{
-    const btn=document.createElement('button'); btn.className='pchip';
-    btn.textContent=p.icon+' '+p.name;
-    btn.onclick=()=>{
-      document.getElementById('de-name').value=p.name;
-      document.getElementById('de-category').value=p.cat;
-      document.getElementById('screen-doc-edit').dataset.icon=p.icon;
-      toggleDeContractBlock(p.cat);
-    };
-    wrap.appendChild(btn);
-  });
-}
-
 function toggleDeExpiry(){
   const noExp=document.getElementById('de-no-expiry').checked;
   document.getElementById('de-expiry').disabled=noExp;
@@ -2455,7 +2613,6 @@ function openDocEdit(id){
   document.getElementById('doc-edit-title').textContent=doc?'書類を編集':'書類を追加';
   document.getElementById('de-id').value=id||'';
   document.getElementById('screen-doc-edit').dataset.icon=doc?.icon||'';
-  document.getElementById('de-preset-block').style.display=doc?'none':'block';
   document.getElementById('de-name').value=doc?.name||'';
   document.getElementById('de-name-err').style.display='none';
   document.getElementById('de-category').value=doc?.cat||'介護・医療';
@@ -2495,7 +2652,6 @@ function openDocEdit(id){
   buildPhotoSlots('de-photos', doc?.photos||[]);
   // 削除ボタン
   document.getElementById('de-del-btn').style.display=id?'inline-block':'none';
-  buildDePresets();
   openScreen('screen-doc-edit');
 }
 
@@ -2962,12 +3118,333 @@ function saveTenantHouse(){
   alert('✓ 貸家情報を保存しました');
 }
 
+// ===== 確定申告 =====
+let currentTaxYear = new Date().getFullYear();
+
+function changeTaxYear(d){
+  const minYear=new Date().getFullYear()-3;
+  const maxYear=new Date().getFullYear();
+  currentTaxYear=Math.max(minYear,Math.min(maxYear,currentTaxYear+d));
+  renderTax();
+}
+
+function getTaxYear(y){ return db.taxData[y]||{}; }
+function getTaxMonth(y,m){ return (db.taxData[y]?.months||{})[String(m)]||{}; }
+function getTaxPersonal(y){ return db.taxData[y]?.personal||{}; }
+function getTaxStatus(y){ return db.taxData[y]?.status||{}; }
+
+// アラートチェック
+function checkTaxAlerts(){
+  const today=new Date();
+  const m=today.getMonth()+1;
+  const y=today.getFullYear();
+  const alerts=[];
+
+  // マイナンバー有効期限2ヶ月前
+  const mynumber=(db.docs||[]).find(d=>d.name&&d.name.includes('マイナンバー'));
+  if(mynumber&&mynumber.expiry&&!mynumber.noExpiry){
+    const days=Math.floor((new Date(mynumber.expiry)-today)/86400000);
+    if(days<=60) alerts.push(`⚠️ マイナンバーカードの有効期限まであと${days}日です`);
+  }
+
+  // 申告年度（前年）のデータをチェック
+  const taxYear=y-1; // 申告対象年度は前年
+  const status=getTaxStatus(taxYear);
+  const personal=getTaxPersonal(taxYear);
+  const isSubmitted=!!(status.submitDate);
+
+  if(!isSubmitted){
+    // 12月〜翌3月にアラート
+    if(m===12||m<=3){
+      if(!personal.pension) alerts.push(`⚠️ ${taxYear}年分：本人年金収入が未入力です`);
+      if(!personal.care&&!personal.medical) alerts.push(`⚠️ ${taxYear}年分：社会保険料が未入力です`);
+      if(!personal.insurance) alerts.push(`⚠️ ${taxYear}年分：損害保険料が未入力です`);
+    }
+  }
+
+  const banner=document.getElementById('tax-alert-banner');
+  if(alerts.length>0){
+    banner.innerHTML=`<div class="alert-banner danger">${alerts.join('<br>')}</div>`;
+  } else { banner.innerHTML=''; }
+  return alerts.length;
+}
+
+// ヘッダーバッジ更新（全アラート合算）
+function updateHeaderBadge(){
+  const mailAlerts=(db.mails||[]).filter(m=>{
+    if(!m.kanshi||!m.kanshiDate||m.date||m.kanryo) return false;
+    return new Date(m.kanshiDate)<new Date();
+  }).length;
+  const docAlerts=(db.docs||[]).filter(d=>['expired','week','month'].includes(getDocStatus(d))).length;
+  const taxAlerts=checkTaxAlerts();
+  const total=mailAlerts+docAlerts+taxAlerts;
+  const badge=document.getElementById('header-badge');
+  if(total>0){ badge.textContent='⚠️ '+total+'件'; badge.style.display='inline-block'; }
+  else badge.style.display='none';
+}
+
+// メイン描画
+function renderTax(){
+  document.getElementById('tax-yr-label').textContent=currentTaxYear+'年度';
+  renderTaxHeaderInfo();
+  renderTaxStatus();
+  renderTaxTable();
+  renderTaxPersonal();
+}
+
+// マイナンバー・年金番号
+function renderTaxHeaderInfo(){
+  const wrap=document.getElementById('tax-header-info');
+  const mn=(db.docs||[]).find(d=>d.name&&d.name.includes('マイナンバー'));
+  const yn=(db.docs||[]).find(d=>d.name&&(d.name.includes('年金')));
+  let html='<div class="detail-section-title" style="font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:8px;">🪪 番号情報</div>';
+  if(mn){
+    const nums=(mn.numbers||[]);
+    const mnNum=nums.length>0?nums[0].value:'未登録';
+    html+=`<div class="tax-personal-row"><span class="tax-personal-label">マイナンバー</span><span class="tax-personal-val" style="font-family:monospace;">${mnNum}</span></div>`;
+    if(mn.expiry) html+=`<div class="tax-personal-row"><span class="tax-personal-label">マイナンバー有効期限</span><span class="tax-personal-val">${mn.expiry}</span></div>`;
+  } else {
+    html+=`<div style="font-size:13px;color:var(--text3);">マイナンバーカードが重要書類に未登録です</div>`;
+  }
+  if(yn){
+    const nums=(yn.numbers||[]);
+    const ynNum=nums.length>0?nums[0].value:'未登録';
+    html+=`<div class="tax-personal-row"><span class="tax-personal-label">年金番号</span><span class="tax-personal-val" style="font-family:monospace;">${ynNum}</span></div>`;
+  }
+  wrap.innerHTML=html;
+}
+
+// 申告ステータス
+function renderTaxStatus(){
+  const wrap=document.getElementById('tax-status-display');
+  const s=getTaxStatus(currentTaxYear);
+  const isSubmitted=!!(s.submitDate);
+  let html='';
+  if(isSubmitted){
+    html+=`<div class="tax-status-done">✅ 確定申告完了（${s.submitDate}）${s.type?'　'+s.type:''}</div>`;
+    if(s.taxAmount!==undefined&&s.taxAmount!==''){
+      const amt=Number(s.taxAmount);
+      const label=amt>0?'納税額':amt<0?'還付額':'無税';
+      const color=amt>0?'var(--danger)':amt<0?'var(--success)':'var(--text2)';
+      html+=`<div style="margin-top:8px;padding:10px;background:var(--bg3);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:13px;font-weight:600;">${label}</span>
+        <span style="font-size:16px;font-weight:700;color:${color};">${amt===0?'無税':'¥'+Math.abs(amt).toLocaleString()}</span>
+      </div>`;
+    }
+  } else {
+    html+=`<div class="tax-status-pending">`;
+    html+=`${s.type||'白色申告'}`;
+    if(s.periodStart&&s.periodEnd) html+=`　提出期間：${s.periodStart}〜${s.periodEnd}`;
+    html+=`</div>`;
+  }
+  if(s.memo) html+=`<div class="memo-box" style="margin-top:8px;">📝 ${s.memo}</div>`;
+  if(s.pdfLinks&&s.pdfLinks.length>0){
+    html+=`<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">`;
+    s.pdfLinks.forEach(l=>{ if(l.url) html+=`<a href="${l.url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;background:var(--accent-light);color:var(--accent2);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;text-decoration:none;">📎 ${l.name||'書類'}</a>`; });
+    html+=`</div>`;
+  }
+  html+=`<button class="btn btn-secondary btn-sm" style="margin-top:10px;" onclick="openTaxStatus()">✏️ 編集</button>`;
+  wrap.innerHTML=html;
+}
+
+// 収支表
+function renderTaxTable(){
+  const table=document.getElementById('tax-table');
+  let totalRent=0,totalLand=0,totalMgmt=0,totalRepair=0,totalOther=0;
+  for(let m=1;m<=12;m++){
+    const d=getTaxMonth(currentTaxYear,m);
+    totalRent+=Number(d.rent)||0; totalLand+=Number(d.land)||0;
+    totalMgmt+=Number(d.mgmt)||0; totalRepair+=Number(d.repair)||0;
+    totalOther+=Number(d.other)||0;
+  }
+  const totalIncome=totalRent+totalLand;
+  const totalExp=totalMgmt+totalRepair+totalOther;
+  const totalNet=totalIncome-totalExp;
+
+  document.getElementById('tax-income-summary').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+      <div style="background:var(--success-light);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:11px;color:var(--success);margin-bottom:3px;">年間収入</div>
+        <div style="font-size:14px;font-weight:700;color:var(--success);">¥${totalIncome.toLocaleString()}</div>
+      </div>
+      <div style="background:var(--danger-light);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:11px;color:var(--danger);margin-bottom:3px;">年間支出</div>
+        <div style="font-size:14px;font-weight:700;color:var(--danger);">¥${totalExp.toLocaleString()}</div>
+      </div>
+      <div style="background:var(--accent-light);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:11px;color:var(--accent2);margin-bottom:3px;">差引</div>
+        <div style="font-size:14px;font-weight:700;color:var(--accent2);">¥${totalNet.toLocaleString()}</div>
+      </div>
+    </div>
+  `;
+
+  let html=`<thead><tr>
+    <th>月</th><th>家賃収入</th><th>地代</th><th>管理費</th><th>修繕費</th><th>その他</th><th>差引</th><th>📎</th>
+  </tr></thead><tbody>`;
+  html+=`<tr class="total-row">
+    <td>合計</td>
+    <td>¥${totalRent.toLocaleString()}</td><td>¥${totalLand.toLocaleString()}</td>
+    <td>¥${totalMgmt.toLocaleString()}</td><td>¥${totalRepair.toLocaleString()}</td>
+    <td>¥${totalOther.toLocaleString()}</td>
+    <td style="color:${totalNet>=0?'var(--success)':'var(--danger)'};">¥${totalNet.toLocaleString()}</td>
+    <td></td>
+  </tr>`;
+  for(let m=1;m<=12;m++){
+    const d=getTaxMonth(currentTaxYear,m);
+    const net=(Number(d.rent)||0)+(Number(d.land)||0)-(Number(d.mgmt)||0)-(Number(d.repair)||0)-(Number(d.other)||0);
+    const hasPdf=d.pdfLinks&&d.pdfLinks.length>0;
+    const hasData=d.rent||d.land||d.mgmt||d.repair||d.other;
+    html+=`<tr>
+      <td>${m}月</td>
+      <td class="cell-link" onclick="openTaxMonth(${m})">${d.rent?'¥'+Number(d.rent).toLocaleString():'-'}</td>
+      <td class="cell-link" onclick="openTaxMonth(${m})">${d.land?'¥'+Number(d.land).toLocaleString():'-'}</td>
+      <td class="cell-link" onclick="openTaxMonth(${m})">${d.mgmt?'¥'+Number(d.mgmt).toLocaleString():'-'}</td>
+      <td class="cell-link" onclick="openTaxMonth(${m})">${d.repair?'¥'+Number(d.repair).toLocaleString():'-'}</td>
+      <td class="cell-link" onclick="openTaxMonth(${m})">${d.other?'¥'+Number(d.other).toLocaleString():'-'}</td>
+      <td style="color:${net>=0?'var(--success)':'var(--danger)'};">${hasData?'¥'+net.toLocaleString():'-'}</td>
+      <td>${hasPdf?`<span style="color:var(--accent2);cursor:pointer;" onclick="openTaxMonth(${m})">📎${d.pdfLinks.length}</span>`:''}</td>
+    </tr>`;
+  }
+  html+=`</tbody>`;
+  table.innerHTML=html;
+}
+
+// 個人収支
+function renderTaxPersonal(){
+  const p=getTaxPersonal(currentTaxYear);
+  const care=Number(p.care)||0;
+  const medical=Number(p.medical)||0;
+  const social=care+medical;
+  const wrap=document.getElementById('tax-personal');
+  let html=`
+    <div class="tax-personal-row"><span class="tax-personal-label">本人年金（老齢基礎）</span><span class="tax-personal-val">${p.pension?'¥'+Number(p.pension).toLocaleString():'未入力'}</span></div>
+    <div class="tax-personal-row"><span class="tax-personal-label">介護保険料額</span><span class="tax-personal-val">${p.care?'¥'+Number(p.care).toLocaleString():'未入力'}</span></div>
+    <div class="tax-personal-row"><span class="tax-personal-label">後期高齢者医療保険料額</span><span class="tax-personal-val">${p.medical?'¥'+Number(p.medical).toLocaleString():'未入力'}</span></div>
+    <div class="tax-personal-row" style="background:var(--accent-light);margin:4px -4px;padding:8px 4px;border-radius:6px;"><span class="tax-personal-label" style="font-weight:700;color:var(--accent2);">社会保険料の額（合計）</span><span class="tax-personal-val" style="color:var(--accent2);">¥${social.toLocaleString()}</span></div>
+    <div class="tax-personal-row"><span class="tax-personal-label">医療費（年間）</span><span class="tax-personal-val">${p.medicalFee?'¥'+Number(p.medicalFee).toLocaleString():'未入力'}</span></div>
+    <div class="tax-personal-row"><span class="tax-personal-label">損害保険料</span><span class="tax-personal-val">${p.insurance?'¥'+Number(p.insurance).toLocaleString():'未入力'}</span></div>
+    <button class="btn btn-secondary btn-sm" style="margin-top:10px;" onclick="openTaxPersonal()">✏️ 編集</button>
+  `;
+  wrap.innerHTML=html;
+}
+
+// 月次入力画面
+function openTaxMonth(m){
+  const d=getTaxMonth(currentTaxYear,m);
+  document.getElementById('tax-month-title').textContent=`${currentTaxYear}年 ${m}月 収支入力`;
+  document.getElementById('tm-year').value=currentTaxYear;
+  document.getElementById('tm-month').value=m;
+  document.getElementById('tm-rent').value=d.rent||'';
+  document.getElementById('tm-land').value=d.land||'';
+  document.getElementById('tm-mgmt').value=d.mgmt||'';
+  document.getElementById('tm-repair').value=d.repair||'';
+  document.getElementById('tm-other').value=d.other||'';
+  document.getElementById('tm-report-date').value=d.reportDate||'';
+  document.getElementById('tm-memo').value=d.memo||'';
+  document.getElementById('tm-pdf-links').innerHTML=''; pdfRowCount=0;
+  if(d.pdfLinks?.length>0) d.pdfLinks.forEach(l=>addPdfLinkRow('tm-pdf-links',l.name,l.url));
+  openScreen('screen-tax-month');
+}
+
+function saveTaxMonth(){
+  const y=document.getElementById('tm-year').value;
+  const m=document.getElementById('tm-month').value;
+  if(!db.taxData[y]) db.taxData[y]={};
+  if(!db.taxData[y].months) db.taxData[y].months={};
+  db.taxData[y].months[m]={
+    rent: document.getElementById('tm-rent').value,
+    land: document.getElementById('tm-land').value,
+    mgmt: document.getElementById('tm-mgmt').value,
+    repair: document.getElementById('tm-repair').value,
+    other: document.getElementById('tm-other').value,
+    reportDate: document.getElementById('tm-report-date').value,
+    memo: document.getElementById('tm-memo').value,
+    pdfLinks: getPdfLinks('tm-pdf-links'),
+  };
+  saveDB(); closeScreen('screen-tax-month'); renderTax();
+}
+
+// 申告ステータス編集
+function openTaxStatus(){
+  const s=getTaxStatus(currentTaxYear);
+  document.getElementById('tax-status-title').textContent=currentTaxYear+'年度 申告ステータス';
+  document.getElementById('ts-year').value=currentTaxYear;
+  const type=s.type||'白色申告';
+  document.getElementById(type==='青色申告'?'ts-type-blue':'ts-type-white').checked=true;
+  document.getElementById('ts-period-start').value=s.periodStart||'';
+  document.getElementById('ts-period-end').value=s.periodEnd||'';
+  document.getElementById('ts-submit-date').value=s.submitDate||'';
+  document.getElementById('ts-tax-amount').value=s.taxAmount!==undefined?s.taxAmount:'';
+  document.getElementById('ts-memo').value=s.memo||'';
+  document.getElementById('ts-pdf-links').innerHTML=''; pdfRowCount=0;
+  if(s.pdfLinks?.length>0) s.pdfLinks.forEach(l=>addPdfLinkRow('ts-pdf-links',l.name,l.url));
+  openScreen('screen-tax-status');
+}
+
+function saveTaxStatus(){
+  const y=document.getElementById('ts-year').value;
+  if(!db.taxData[y]) db.taxData[y]={};
+  db.taxData[y].status={
+    type: document.querySelector('input[name="ts-type"]:checked')?.value||'白色申告',
+    periodStart: document.getElementById('ts-period-start').value,
+    periodEnd: document.getElementById('ts-period-end').value,
+    submitDate: document.getElementById('ts-submit-date').value,
+    taxAmount: document.getElementById('ts-tax-amount').value,
+    memo: document.getElementById('ts-memo').value,
+    pdfLinks: getPdfLinks('ts-pdf-links'),
+  };
+  saveDB(); closeScreen('screen-tax-status'); renderTax(); updateHeaderBadge();
+}
+
+// 個人収支編集
+function openTaxPersonal(){
+  const p=getTaxPersonal(currentTaxYear);
+  document.getElementById('tax-personal-title').textContent=currentTaxYear+'年度 個人収支';
+  document.getElementById('tp-year').value=currentTaxYear;
+  document.getElementById('tp-pension').value=p.pension||'';
+  document.getElementById('tp-care').value=p.care||'';
+  document.getElementById('tp-medical').value=p.medical||'';
+  document.getElementById('tp-medical-fee').value=p.medicalFee||'';
+  document.getElementById('tp-insurance').value=p.insurance||'';
+  calcSocialInsurance();
+  // 損害保険の重要書類リンク
+  const ins=(db.docs||[]).find(d=>d.name&&d.name.includes('損害保険'));
+  const refWrap=document.getElementById('tp-insurance-ref');
+  if(ins){
+    refWrap.innerHTML=`<div style="background:var(--bg3);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text2);display:flex;align-items:center;justify-content:space-between;">
+      <span>重要書類：${ins.name}</span>
+      <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-tax-personal');showTab('docs');" style="font-size:11px;padding:4px 10px;">参照</button>
+    </div>`;
+  } else { refWrap.innerHTML=''; }
+  openScreen('screen-tax-personal');
+}
+
+function calcSocialInsurance(){
+  const care=Number(document.getElementById('tp-care').value)||0;
+  const medical=Number(document.getElementById('tp-medical').value)||0;
+  document.getElementById('tp-social-total').textContent='¥'+(care+medical).toLocaleString();
+}
+
+function saveTaxPersonal(){
+  const y=document.getElementById('tp-year').value;
+  if(!db.taxData[y]) db.taxData[y]={};
+  db.taxData[y].personal={
+    pension: document.getElementById('tp-pension').value,
+    care: document.getElementById('tp-care').value,
+    medical: document.getElementById('tp-medical').value,
+    medicalFee: document.getElementById('tp-medical-fee').value,
+    insurance: document.getElementById('tp-insurance').value,
+  };
+  saveDB(); closeScreen('screen-tax-personal'); renderTax(); updateHeaderBadge();
+}
+
 // ===== 全体レンダリング =====
 function renderAll(){
   buildFilterUI();
   renderMailList();
   renderDocs();
   renderTenantList();
+  renderTax();
   checkAlerts();
   updateSettingsCounts();
   checkBackupReminder();
