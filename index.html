@@ -247,7 +247,7 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <div id="pin-screen">
   <div class="pin-logo">📬</div>
   <div class="pin-title">母の管理アプリ</div>
-  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v1.6</div>
+  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v1.7</div>
   <p id="pin-prompt">PINコードを入力してください</p>
   <div class="pin-dots">
     <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
@@ -306,6 +306,10 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
           </button>
         </div>
         <div class="filter-panel" id="filter-panel">
+          <div class="filter-label">到着監視</div>
+          <div style="display:flex;gap:6px;margin-bottom:4px;">
+            <button class="filter-tag" id="filter-kanshi-btn" onclick="toggleKanshiFilter()">👁️ 到着監視中のみ</button>
+          </div>
           <div class="filter-label">タグ</div>
           <div class="filter-tags" id="filter-tags"></div>
           <div class="filter-label">差出人</div>
@@ -885,7 +889,7 @@ function closeScreen(id){ document.getElementById(id).classList.remove('active')
 function closeAllScreens(){ document.querySelectorAll('.sub-screen').forEach(s=>s.classList.remove('active')); }
 
 // ===== フィルタ状態 =====
-let filterState = { mode:'miatari', tags:[], sender:'', year:'' };
+let filterState = { mode:'miatari', tags:[], sender:'', year:'', kanshi:false };
 let filterOpen = false;
 
 function setMode(m){
@@ -898,16 +902,26 @@ function setMode(m){
 function toggleFilter(){
   filterOpen=!filterOpen;
   document.getElementById('filter-panel').classList.toggle('open',filterOpen);
-  document.getElementById('filter-toggle-btn').textContent='';
-  const cnt=countActiveFilters();
-  document.getElementById('filter-toggle-btn').innerHTML=filterOpen
-    ?`<span>閉じる</span>`
-    :`<span>絞り込み</span>${cnt>0?`<span style="background:var(--accent2);color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;">${cnt}</span>`:''}`;
-  document.getElementById('filter-toggle-btn').classList.toggle('has-filter',cnt>0);
+  updateFilterBtn();
+}
+
+function toggleKanshiFilter(){
+  filterState.kanshi=!filterState.kanshi;
+  document.getElementById('filter-kanshi-btn').classList.toggle('active',filterState.kanshi);
+  applyFilter();
 }
 
 function countActiveFilters(){
-  return filterState.tags.length + (filterState.sender?1:0) + (filterState.year?1:0);
+  return filterState.tags.length + (filterState.sender?1:0) + (filterState.year?1:0) + (filterState.kanshi?1:0);
+}
+
+function updateFilterBtn(){
+  const cnt=countActiveFilters();
+  const btn=document.getElementById('filter-toggle-btn');
+  btn.innerHTML=filterOpen
+    ?`<span>閉じる</span>`
+    :`<span>絞り込み</span>${cnt>0?`<span style="background:var(--accent2);color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;">${cnt}</span>`:''}`;
+  btn.classList.toggle('has-filter',cnt>0);
 }
 
 function buildFilterUI(){
@@ -950,12 +964,7 @@ function buildFilterUI(){
 function applyFilter(){
   filterState.sender=document.getElementById('filter-sender').value;
   filterState.year=document.getElementById('filter-year').value;
-  const cnt=countActiveFilters();
-  const btn=document.getElementById('filter-toggle-btn');
-  btn.innerHTML=filterOpen
-    ?`<span>閉じる</span>`
-    :`<span>絞り込み</span>${cnt>0?`<span style="background:var(--accent2);color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;">${cnt}</span>`:''}`;
-  btn.classList.toggle('has-filter',cnt>0);
+  updateFilterBtn();
   renderMailList();
 }
 
@@ -963,10 +972,11 @@ function filterMails(){
   let list=[...db.mails];
   // 未対応のみ
   if(filterState.mode==='miatari') list=list.filter(m=>!m.kanryo);
-  // タグ（「到着監視」タグはkanshiフラグとも連動）
+  // 到着監視専用フィルタ（kanshiフラグで絞り込み、タグと独立）
+  if(filterState.kanshi) list=list.filter(m=>!!m.kanshi);
+  // タグ
   if(filterState.tags.length>0) list=list.filter(m=>{
     const effectiveTags=[...(m.tags||[])];
-    if(m.kanshi && !effectiveTags.includes('到着監視')) effectiveTags.push('到着監視');
     return filterState.tags.every(t=>effectiveTags.includes(t));
   });
   // 差出人
