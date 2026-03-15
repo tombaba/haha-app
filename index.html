@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>母の管理アプリ</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f2f1ed;--bg2:#ffffff;--bg3:#eae9e4;--bg4:#f8f7f3;
+  --accent:#3d6b99;--accent2:#2d5280;--accent-light:#e8f0fb;
+  --success:#2e7d52;--success-light:#e8f5ee;
+  --danger:#b83232;--danger-light:#fdecea;
+  --warning:#b06a00;--warning-light:#fff3e0;
+  --caution:#8a6200;--caution-light:#fffde7;
+  --text:#1a1a1a;--text2:#555;--text3:#999;
+  --border:#d8d7d2;--border2:#c8c7c2;
+  --radius:12px;--radius-lg:18px;
+  --shadow:0 2px 12px rgba(0,0,0,.07);--shadow-lg:0 8px 32px rgba(0,0,0,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:16px;-webkit-font-smoothing:antialiased;}
+
+/* ===== PIN ===== */
+#pin-screen{position:fixed;inset:0;background:linear-gradient(160deg,var(--accent2) 0%,#1a3a5c 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;padding:2rem;}
+.pin-logo{font-size:48px;margin-bottom:1rem;}
+.pin-title{color:#fff;font-size:20px;font-weight:700;margin-bottom:.3rem;}
+#pin-prompt{color:rgba(255,255,255,.7);font-size:13px;margin-bottom:2rem;text-align:center;}
+.pin-dots{display:flex;gap:18px;margin-bottom:2.5rem;}
+.pin-dot{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.4);transition:all .15s;}
+.pin-dot.filled{background:#fff;border-color:#fff;transform:scale(1.1);}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;max-width:280px;}
+.pin-btn{background:rgba(255,255,255,.12);border:none;border-radius:12px;color:#fff;font-size:22px;font-weight:500;padding:16px;cursor:pointer;font-family:inherit;transition:background .1s;}
+.pin-btn:active{background:rgba(255,255,255,.3);}
+.pin-btn.empty{background:transparent;cursor:default;}
+#pin-error{color:#ffaaaa;font-size:13px;margin-top:.75rem;min-height:18px;text-align:center;}
+#pin-hint{color:rgba(255,255,255,.65);font-size:12px;margin-top:.5rem;text-align:center;}
+
+/* ===== APP ===== */
+#app{display:none;flex-direction:column;height:100vh;max-width:600px;margin:0 auto;}
+
+/* ヘッダー */
+.app-header{background:var(--accent2);color:#fff;padding:.9rem 1.25rem .75rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.15);}
+.header-left{display:flex;align-items:center;gap:10px;}
+.header-title{font-size:16px;font-weight:700;}
+.header-badge{background:#e74c3c;color:#fff;font-size:11px;font-weight:700;border-radius:12px;padding:2px 8px;line-height:1.5;display:none;}
+.lock-btn{background:rgba(255,255,255,.18);border:none;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer;font-family:inherit;}
+
+/* タブバー */
+.tab-bar{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;}
+.tab-bar::-webkit-scrollbar{display:none;}
+.tab-btn{flex:1;min-width:60px;padding:11px 6px;border:none;background:transparent;font-size:11px;color:var(--text3);cursor:pointer;border-bottom:3px solid transparent;font-family:inherit;white-space:nowrap;transition:all .15s;}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:700;}
+
+/* コンテンツ */
+.content{flex:1;overflow-y:auto;position:relative;}
+.page{display:none;min-height:100%;padding:1rem 1rem 5rem;}
+.page.active{display:block;}
+
+/* ===== 共通コンポーネント ===== */
+.sec-title{font-size:13px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.75rem;margin-top:1.25rem;}
+.sec-title:first-child{margin-top:0;}
+
+/* カード */
+.card{background:var(--bg2);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden;border-left:4px solid transparent;transition:border-color .2s;}
+.card.bl-danger{border-left-color:var(--danger);}
+.card.bl-warning{border-left-color:#e67e22;}
+.card.bl-caution{border-left-color:#f0c040;}
+.card.bl-success{border-left-color:var(--success);}
+.card.done{opacity:.55;}
+
+/* バッジ・タグ */
+.badge{display:inline-block;font-size:11px;padding:2px 9px;border-radius:20px;font-weight:700;white-space:nowrap;}
+.badge-danger{background:var(--danger-light);color:var(--danger);}
+.badge-warning{background:var(--warning-light);color:var(--warning);}
+.badge-caution{background:var(--caution-light);color:var(--caution);}
+.badge-success{background:var(--success-light);color:var(--success);}
+.badge-gray{background:var(--bg3);color:var(--text3);}
+.badge-blue{background:var(--accent-light);color:var(--accent);}
+
+.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;background:var(--bg3);color:var(--text2);margin:2px;}
+.tag.active-tag{background:var(--accent-light);color:var(--accent);}
+.tag.tag-kanshi{background:#fce4ec;color:#c2185b;}
+
+/* ボタン */
+.btn{padding:10px 20px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s,transform .1s;}
+.btn:active{opacity:.75;transform:scale(.97);}
+.btn-primary{background:var(--accent2);color:#fff;}
+.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border);}
+.btn-danger{background:var(--danger);color:#fff;}
+.btn-success{background:var(--success);color:#fff;}
+.btn-sm{padding:7px 14px;font-size:12px;}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
+
+/* フォーム */
+.fg{margin-bottom:13px;}
+.fl{font-size:12px;color:var(--text2);font-weight:600;margin-bottom:4px;display:block;}
+.fi{width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;font-family:inherit;background:var(--bg4);color:var(--text);outline:none;transition:border-color .15s;}
+.fi:focus{border-color:var(--accent);background:#fff;}
+textarea.fi{resize:vertical;min-height:72px;line-height:1.6;}
+select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%23999' d='M6 8 0 0h12z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;background-color:var(--bg4);}
+.fi-hint{font-size:11px;color:var(--text3);margin-top:3px;}
+.fi-error{font-size:11px;color:var(--danger);margin-top:3px;display:none;}
+
+/* 画像アップロード */
+.img-upload-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px;}
+.img-slot{aspect-ratio:1;border:2px dashed var(--border);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:var(--bg4);overflow:hidden;position:relative;transition:border-color .15s;}
+.img-slot:active{border-color:var(--accent);}
+.img-slot img{width:100%;height:100%;object-fit:cover;}
+.img-slot .img-label{font-size:10px;color:var(--text3);margin-top:4px;}
+.img-slot .img-del{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer;display:none;align-items:center;justify-content:center;}
+.img-slot:hover .img-del{display:flex;}
+.img-slot .img-icon{font-size:20px;color:var(--text3);}
+
+/* PDFリンク */
+.pdf-links-wrap{background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:13px;}
+.pdf-links-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;}
+.pdf-link-row{display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;}
+.pdf-link-row input{padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;width:100%;outline:none;}
+.pdf-link-row input:focus{border-color:var(--accent);}
+.btn-del-row{background:var(--danger);border:none;color:#fff;border-radius:8px;padding:9px 10px;cursor:pointer;font-size:13px;}
+.btn-add-row{background:var(--accent2);border:none;color:#fff;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;margin-top:4px;}
+
+/* 対応状況 */
+.taiou-section{background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:13px;}
+.taiou-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px;}
+.taiou-item{margin-bottom:10px;}
+.taiou-check-row{display:flex;align-items:center;gap:8px;cursor:pointer;}
+.taiou-check{width:20px;height:20px;border-radius:5px;border:2px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;}
+.taiou-check.checked{background:var(--success);border-color:var(--success);}
+.taiou-check.checked::after{content:'✓';color:#fff;font-size:13px;font-weight:700;}
+.taiou-label{font-size:14px;font-weight:500;}
+.taiou-ts{font-size:11px;color:var(--text3);margin-top:2px;margin-left:28px;}
+.taiou-sub{margin-top:6px;margin-left:28px;}
+.taiou-sub input{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;outline:none;margin-bottom:5px;}
+.taiou-sub input:focus{border-color:var(--accent);}
+
+.kanryo-row{display:flex;align-items:center;gap:8px;padding:10px 0 0;border-top:1px solid var(--border);margin-top:4px;cursor:pointer;}
+.kanryo-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;}
+.kanryo-check.checked{background:var(--accent2);border-color:var(--accent2);}
+.kanryo-check.checked::after{content:'✓';color:#fff;font-size:14px;font-weight:700;}
+.kanryo-label{font-size:14px;font-weight:700;color:var(--accent2);}
+
+/* アラートバナー */
+.alert-banner{border-radius:10px;padding:11px 14px;margin-bottom:12px;font-size:13px;line-height:1.7;}
+.alert-banner.danger{background:var(--danger-light);border:1px solid #f5b7b1;color:var(--danger);}
+.alert-banner.warning{background:var(--warning-light);border:1px solid #fad7a0;color:var(--warning);}
+
+/* フィルタ */
+.filter-bar{margin-bottom:12px;}
+.filter-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.filter-toggle-btn{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;transition:all .15s;}
+.filter-toggle-btn.has-filter{background:var(--accent-light);border-color:var(--accent);color:var(--accent);}
+.filter-panel{background:var(--bg2);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;display:none;}
+.filter-panel.open{display:block;}
+.filter-label{font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px;margin-top:10px;}
+.filter-label:first-child{margin-top:0;}
+.filter-tags{display:flex;flex-wrap:wrap;gap:5px;}
+.filter-tag{font-size:12px;padding:5px 11px;border-radius:20px;background:var(--bg3);border:1px solid var(--border);cursor:pointer;transition:all .15s;font-family:inherit;}
+.filter-tag.active{background:var(--accent-light);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.filter-select{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg4);outline:none;appearance:none;-webkit-appearance:none;}
+
+.mode-btns{display:flex;gap:6px;}
+.mode-btn{flex:1;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;background:var(--bg3);color:var(--text2);transition:all .15s;}
+.mode-btn.active{background:var(--accent2);border-color:var(--accent2);color:#fff;}
+
+/* 郵便物カード（一覧） */
+.mail-card{background:var(--bg2);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden;border-left:4px solid var(--border2);transition:all .2s;cursor:pointer;}
+.mail-card.done{opacity:.5;border-left-color:var(--success);}
+.mail-card.kanshi-alert{border-left-color:var(--danger);}
+.mail-card-inner{padding:13px 14px;}
+.mail-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:5px;}
+.mail-card-title{font-size:15px;font-weight:700;flex:1;line-height:1.4;}
+.mail-card-meta{font-size:12px;color:var(--text2);margin-bottom:5px;}
+.mail-card-tags{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:5px;}
+.mail-card-status{display:flex;gap:5px;flex-wrap:wrap;}
+.status-chip{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600;}
+.sc-done{background:#e8f5ee;color:var(--success);}
+.sc-todo{background:var(--bg3);color:var(--text3);}
+.kanryo-badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;}
+.kb-done{background:var(--success-light);color:var(--success);}
+.kb-todo{background:var(--bg3);color:var(--text3);}
+
+/* 別画面（詳細・入力） */
+.sub-screen{position:fixed;inset:0;background:var(--bg);z-index:500;display:none;flex-direction:column;max-width:600px;margin:0 auto;}
+.sub-screen.active{display:flex;}
+.sub-header{background:var(--accent2);color:#fff;padding:.9rem 1.25rem .75rem;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.sub-back{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0;line-height:1;}
+.sub-title{font-size:16px;font-weight:700;flex:1;}
+.sub-content{flex:1;overflow-y:auto;padding:1rem 1rem 5rem;}
+
+/* セパレーター */
+.divider{height:1px;background:var(--border);margin:14px 0;}
+.section-block{background:var(--bg2);border-radius:var(--radius);padding:14px;margin-bottom:12px;box-shadow:var(--shadow);}
+.section-block-title{font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+
+/* FAB */
+.fab{position:fixed;right:1.25rem;bottom:1.5rem;width:56px;height:56px;border-radius:50%;background:var(--accent2);color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.22);display:none;align-items:center;justify-content:center;z-index:400;transition:transform .15s;}
+.fab:active{transform:scale(.9);}
+.fab.visible{display:flex;}
+
+/* 空状態 */
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--text3);}
+.empty-icon{font-size:44px;margin-bottom:10px;}
+.empty-msg{font-size:14px;line-height:1.6;}
+
+/* 設定リスト */
+.setting-item{background:var(--bg2);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:10px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;}
+.setting-item-left{display:flex;align-items:center;gap:12px;}
+.setting-icon{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.si-blue{background:var(--accent-light);}
+.si-green{background:var(--success-light);}
+.si-red{background:var(--danger-light);}
+.si-gray{background:var(--bg3);}
+.setting-name{font-size:15px;font-weight:500;}
+.setting-sub{font-size:12px;color:var(--text3);margin-top:1px;}
+.setting-arrow{color:var(--text3);font-size:14px;}
+
+/* 差出人マスタ */
+.sender-item{background:var(--bg2);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;}
+.sender-name{font-size:15px;font-weight:500;}
+.sender-sub{font-size:12px;color:var(--text3);margin-top:2px;}
+
+/* スクロールバー */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- ===== PIN ===== -->
+<div id="pin-screen">
+  <div class="pin-logo">📬</div>
+  <div class="pin-title">母の管理アプリ</div>
+  <p id="pin-prompt">PINコードを入力してください</p>
+  <div class="pin-dots">
+    <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
+  </div>
+  <div class="pin-pad">
+    <button class="pin-btn" onclick="pi('1')">1</button>
+    <button class="pin-btn" onclick="pi('2')">2</button>
+    <button class="pin-btn" onclick="pi('3')">3</button>
+    <button class="pin-btn" onclick="pi('4')">4</button>
+    <button class="pin-btn" onclick="pi('5')">5</button>
+    <button class="pin-btn" onclick="pi('6')">6</button>
+    <button class="pin-btn" onclick="pi('7')">7</button>
+    <button class="pin-btn" onclick="pi('8')">8</button>
+    <button class="pin-btn" onclick="pi('9')">9</button>
+    <button class="pin-btn empty"></button>
+    <button class="pin-btn" onclick="pi('0')">0</button>
+    <button class="pin-btn" onclick="pd()">⌫</button>
+  </div>
+  <div id="pin-error"></div>
+  <div id="pin-hint"></div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="app">
+  <div class="app-header">
+    <div class="header-left">
+      <span>📬</span>
+      <span class="header-title">母の管理アプリ</span>
+      <span class="header-badge" id="header-badge"></span>
+    </div>
+    <button class="lock-btn" onclick="lockApp()">🔒 ロック</button>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-mail" onclick="showTab('mail')">📮 郵便記録</button>
+    <button class="tab-btn" id="tab-docs" onclick="showTab('docs')">📄 重要書類</button>
+    <button class="tab-btn" id="tab-tenant" onclick="showTab('tenant')">🏠 賃借人</button>
+    <button class="tab-btn" id="tab-tax" onclick="showTab('tax')">🧾 白色申告</button>
+    <button class="tab-btn" id="tab-settings" onclick="showTab('settings')">⚙️ 設定</button>
+  </div>
+  <div class="content">
+
+    <!-- ===== 郵便記録ページ ===== -->
+    <div id="page-mail" class="page active">
+      <div id="mail-alert-banner"></div>
+
+      <!-- フィルタ -->
+      <div class="filter-bar">
+        <div class="filter-top">
+          <div class="mode-btns" style="flex:1;">
+            <button class="mode-btn active" id="mode-miatari" onclick="setMode('miatari')">未対応のみ</button>
+            <button class="mode-btn" id="mode-all" onclick="setMode('all')">全件表示</button>
+          </div>
+          <button class="filter-toggle-btn" id="filter-toggle-btn" onclick="toggleFilter()">
+            <span>絞り込み</span><span id="filter-badge-txt"></span>
+          </button>
+        </div>
+        <div class="filter-panel" id="filter-panel">
+          <div class="filter-label">タグ</div>
+          <div class="filter-tags" id="filter-tags"></div>
+          <div class="filter-label">差出人</div>
+          <select class="filter-select" id="filter-sender" onchange="applyFilter()">
+            <option value="">すべて</option>
+          </select>
+          <div class="filter-label">受領年</div>
+          <select class="filter-select" id="filter-year" onchange="applyFilter()">
+            <option value="">すべて</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="mail-list"></div>
+      <div class="empty-state" id="mail-empty" style="display:none;">
+        <div class="empty-icon">📬</div>
+        <div class="empty-msg">郵便物を記録してください<br>右下の＋ボタンで追加できます</div>
+      </div>
+    </div>
+
+    <!-- ===== 重要書類ページ（準備中） ===== -->
+    <div id="page-docs" class="page">
+      <div class="empty-state">
+        <div class="empty-icon">📄</div>
+        <div class="empty-msg">重要書類タブは<br>フェーズ2で追加予定です</div>
+      </div>
+    </div>
+
+    <!-- ===== 賃借人ページ（準備中） ===== -->
+    <div id="page-tenant" class="page">
+      <div class="empty-state">
+        <div class="empty-icon">🏠</div>
+        <div class="empty-msg">賃借人管理タブは<br>フェーズ4で追加予定です</div>
+      </div>
+    </div>
+
+    <!-- ===== 白色申告ページ（準備中） ===== -->
+    <div id="page-tax" class="page">
+      <div class="empty-state">
+        <div class="empty-icon">🧾</div>
+        <div class="empty-msg">白色申告タブは<br>フェーズ3で追加予定です</div>
+      </div>
+    </div>
+
+    <!-- ===== 設定ページ ===== -->
+    <div id="page-settings" class="page">
+      <div class="sec-title">アカウント</div>
+      <div class="setting-item" onclick="openPinChange()">
+        <div class="setting-item-left">
+          <div class="setting-icon si-blue">🔐</div>
+          <div><div class="setting-name">PINコードの変更</div><div class="setting-sub">4桁の数字</div></div>
+        </div>
+        <div class="setting-arrow">▶</div>
+      </div>
+
+      <div class="sec-title">マスタ管理</div>
+      <div class="setting-item" onclick="openSenderMaster()">
+        <div class="setting-item-left">
+          <div class="setting-icon si-green">👤</div>
+          <div><div class="setting-name">差出人マスタ</div><div class="setting-sub" id="sender-master-count">0件登録済み</div></div>
+        </div>
+        <div class="setting-arrow">▶</div>
+      </div>
+      <div class="setting-item" onclick="openTagMaster()">
+        <div class="setting-item-left">
+          <div class="setting-icon si-blue">🏷️</div>
+          <div><div class="setting-name">自由タグ管理</div><div class="setting-sub" id="tag-master-count">0件登録済み</div></div>
+        </div>
+        <div class="setting-arrow">▶</div>
+      </div>
+      <div class="setting-item" onclick="openFileMaster()">
+        <div class="setting-item-left">
+          <div class="setting-icon si-gray">📁</div>
+          <div><div class="setting-name">ファイル名マスタ</div><div class="setting-sub" id="file-master-count">0件登録済み</div></div>
+        </div>
+        <div class="setting-arrow">▶</div>
+      </div>
+      <div class="setting-item" onclick="openLocationMaster()">
+        <div class="setting-item-left">
+          <div class="setting-icon si-gray">📦</div>
+          <div><div class="setting-name">保管場所マスタ</div><div class="setting-sub" id="location-master-count">0件登録済み</div></div>
+        </div>
+        <div class="setting-arrow">▶</div>
+      </div>
+
+      <div class="sec-title">データ管理</div>
+      <div class="setting-item" onclick="exportData()" id="setting-export">
+        <div class="setting-item-left">
+          <div class="setting-icon si-gray">📤</div>
+          <div>
+            <div class="setting-name">データをエクスポート</div>
+            <div class="setting-sub" id="export-sub">JSONファイルとして保存</div>
+          </div>
+        </div>
+        <div class="setting-arrow">▶</div>
+      </div>
+      <div class="setting-item" onclick="openImport()">
+        <div class="setting-item-left">
+          <div class="setting-icon si-green">📥</div>
+          <div><div class="setting-name">データをインポート</div><div class="setting-sub">機種変更・復元時に使用</div></div>
+        </div>
+        <div class="setting-arrow">▶</div>
+      </div>
+      <div class="setting-item" onclick="resetData()">
+        <div class="setting-item-left">
+          <div class="setting-icon si-red">🗑️</div>
+          <div><div class="setting-name">全データを削除</div><div class="setting-sub">この操作は取り消せません</div></div>
+        </div>
+        <div class="setting-arrow">▶</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FAB -->
+<button class="fab" id="fab" onclick="openMailEdit(null)">＋</button>
+
+<!-- ===== 郵便物 詳細・編集画面 ===== -->
+<div class="sub-screen" id="screen-mail-edit">
+  <div class="sub-header">
+    <button class="sub-back" onclick="closeMailEdit()">←</button>
+    <div class="sub-title" id="mail-edit-title">郵便物を記録</div>
+  </div>
+  <div class="sub-content">
+    <input type="hidden" id="me-id">
+
+    <!-- 基本情報 -->
+    <div class="section-block">
+      <div class="section-block-title">📋 基本情報</div>
+      <div class="fg">
+        <label class="fl">タイトル *</label>
+        <input type="text" class="fi" id="me-title" placeholder="例：年金振込通知書 1月分">
+        <div class="fi-error" id="me-title-err">タイトルを入力してください</div>
+      </div>
+      <div class="fg">
+        <label class="fl">差出人</label>
+        <select class="fi" id="me-sender-select" onchange="onSenderSelect()">
+          <option value="">選択または新規入力</option>
+        </select>
+      </div>
+      <div id="me-sender-detail">
+        <div class="fg">
+          <label class="fl">差出人名</label>
+          <input type="text" class="fi" id="me-sender-name" placeholder="例：日本年金機構">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;">
+          <div class="fg">
+            <label class="fl">郵便番号</label>
+            <input type="text" class="fi" id="me-sender-zip" placeholder="000-0000">
+          </div>
+          <div class="fg">
+            <label class="fl">電話番号</label>
+            <input type="tel" class="fi" id="me-sender-tel" placeholder="00-0000-0000">
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">住所</label>
+          <input type="text" class="fi" id="me-sender-addr" placeholder="例：東京都千代田区…">
+        </div>
+        <div class="fg" id="me-save-sender-wrap">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text2);">
+            <input type="checkbox" id="me-save-sender" style="width:16px;height:16px;">
+            この差出人をマスタに保存する
+          </label>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">受取日</label>
+        <input type="date" class="fi" id="me-date">
+      </div>
+      <div class="fg">
+        <label class="fl">金額（任意）</label>
+        <input type="number" inputmode="numeric" class="fi" id="me-amount" placeholder="例：150000">
+      </div>
+    </div>
+
+    <!-- タグ -->
+    <div class="section-block">
+      <div class="section-block-title">🏷️ タグ</div>
+      <div id="me-tags-wrap" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
+
+    <!-- 到着監視 -->
+    <div class="section-block">
+      <div class="section-block-title">👁️ 到着監視</div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:10px;">
+        <input type="checkbox" id="me-kanshi" style="width:18px;height:18px;" onchange="toggleKanshi()">
+        <span style="font-size:14px;">到着監視する</span>
+      </label>
+      <div id="me-kanshi-detail" style="display:none;">
+        <div class="fg">
+          <label class="fl">到着予定日</label>
+          <input type="date" class="fi" id="me-kanshi-date">
+          <div class="fi-hint">この日を過ぎても未登録の場合アラートを表示します</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- メモ・リンク -->
+    <div class="section-block">
+      <div class="section-block-title">📝 メモ・関連書類</div>
+      <div class="fg">
+        <label class="fl">メモ</label>
+        <textarea class="fi" id="me-memo" placeholder="重要な内容・対応が必要な事項など"></textarea>
+      </div>
+      <div class="pdf-links-wrap">
+        <div class="pdf-links-title">📎 関連書類リンク（Google Drive等）</div>
+        <div id="me-pdf-links"></div>
+        <button class="btn-add-row" onclick="addPdfLinkRow('me-pdf-links')">＋ リンクを追加</button>
+      </div>
+    </div>
+
+    <!-- 写真 -->
+    <div class="section-block">
+      <div class="section-block-title">📷 写真（最大4枚）</div>
+      <div class="img-upload-grid" id="me-photos"></div>
+    </div>
+
+    <!-- 対応状況 -->
+    <div class="section-block">
+      <div class="section-block-title">✅ 対応状況</div>
+      <div class="taiou-section">
+        <div class="taiou-item" id="taiou-kokoku">
+          <div class="taiou-check-row" onclick="toggleTaiou('kokoku')">
+            <div class="taiou-check" id="chk-kokoku"></div>
+            <div class="taiou-label">白色申告記入済</div>
+          </div>
+          <div class="taiou-ts" id="ts-kokoku"></div>
+        </div>
+        <div class="taiou-item" id="taiou-pdf">
+          <div class="taiou-check-row" onclick="toggleTaiou('pdf')">
+            <div class="taiou-check" id="chk-pdf"></div>
+            <div class="taiou-label">PDFファイル化済</div>
+          </div>
+          <div class="taiou-ts" id="ts-pdf"></div>
+          <div class="taiou-sub" id="sub-pdf" style="display:none;">
+            <input type="text" placeholder="Google Drive URL" id="taiou-pdf-url">
+          </div>
+        </div>
+        <div class="taiou-item" id="taiou-filing">
+          <div class="taiou-check-row" onclick="toggleTaiou('filing')">
+            <div class="taiou-check" id="chk-filing"></div>
+            <div class="taiou-label">ファイリング済</div>
+          </div>
+          <div class="taiou-ts" id="ts-filing"></div>
+          <div class="taiou-sub" id="sub-filing" style="display:none;">
+            <select id="taiou-filing-name" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;margin-bottom:5px;">
+              <option value="">ファイル名を選択</option>
+            </select>
+            <input type="text" placeholder="または直接入力" id="taiou-filing-name-input" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;margin-bottom:5px;">
+            <select id="taiou-filing-loc" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;margin-bottom:5px;">
+              <option value="">保管場所を選択</option>
+            </select>
+            <input type="text" placeholder="または直接入力" id="taiou-filing-loc-input" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;">
+          </div>
+        </div>
+        <div class="taiou-item" id="taiou-haiki">
+          <div class="taiou-check-row" onclick="toggleTaiou('haiki')">
+            <div class="taiou-check" id="chk-haiki"></div>
+            <div class="taiou-label">原本破棄済</div>
+          </div>
+          <div class="taiou-ts" id="ts-haiki"></div>
+        </div>
+        <div class="kanryo-row" onclick="toggleKanryo()">
+          <div class="kanryo-check" id="chk-kanryo"></div>
+          <div class="kanryo-label">対応完了</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveMail()">保存する</button>
+      <button class="btn btn-secondary" onclick="closeMailEdit()">キャンセル</button>
+      <button class="btn btn-danger btn-sm" id="me-del-btn" onclick="deleteMail()" style="display:none;">削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ファイル名マスタ ===== -->
+<div class="sub-screen" id="screen-file-master">
+  <div class="sub-header">
+    <button class="sub-back" onclick="closeScreen('screen-file-master')">←</button>
+    <div class="sub-title">ファイル名マスタ</div>
+  </div>
+  <div class="sub-content">
+    <div class="section-block">
+      <div class="section-block-title">新規登録</div>
+      <div class="fg"><label class="fl">ファイル名 *</label><input type="text" class="fi" id="fm-name" placeholder="例：2024年_年金関係"></div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="saveFileMaster()">登録する</button></div>
+    </div>
+    <div class="sec-title">登録済みファイル名</div>
+    <div id="file-master-list"></div>
+    <div class="empty-state" id="file-master-empty" style="display:none;">
+      <div class="empty-icon">📁</div><div class="empty-msg">ファイル名が登録されていません</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 保管場所マスタ ===== -->
+<div class="sub-screen" id="screen-location-master">
+  <div class="sub-header">
+    <button class="sub-back" onclick="closeScreen('screen-location-master')">←</button>
+    <div class="sub-title">保管場所マスタ</div>
+  </div>
+  <div class="sub-content">
+    <div class="section-block">
+      <div class="section-block-title">新規登録</div>
+      <div class="fg"><label class="fl">保管場所 *</label><input type="text" class="fi" id="lm-name" placeholder="例：リビングの棚・引き出し2段目"></div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="saveLocationMaster()">登録する</button></div>
+    </div>
+    <div class="sec-title">登録済み保管場所</div>
+    <div id="location-master-list"></div>
+    <div class="empty-state" id="location-master-empty" style="display:none;">
+      <div class="empty-icon">📦</div><div class="empty-msg">保管場所が登録されていません</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 差出人編集 ===== -->
+<div class="sub-screen" id="screen-sender-edit">
+  <div class="sub-header">
+    <button class="sub-back" onclick="closeScreen('screen-sender-edit')">←</button>
+    <div class="sub-title">差出人を編集</div>
+  </div>
+  <div class="sub-content">
+    <div class="section-block">
+      <input type="hidden" id="se-id">
+      <div class="fg"><label class="fl">差出人名 *</label><input type="text" class="fi" id="se-name"></div>
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;">
+        <div class="fg"><label class="fl">郵便番号</label><input type="text" class="fi" id="se-zip"></div>
+        <div class="fg"><label class="fl">電話番号</label><input type="tel" class="fi" id="se-tel"></div>
+      </div>
+      <div class="fg"><label class="fl">住所</label><input type="text" class="fi" id="se-addr"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="updateSender()">保存する</button>
+        <button class="btn btn-secondary" onclick="closeScreen('screen-sender-edit')">キャンセル</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== インポート ===== -->
+<div class="sub-screen" id="screen-import">
+  <div class="sub-header">
+    <button class="sub-back" onclick="closeScreen('screen-import')">←</button>
+    <div class="sub-title">データをインポート</div>
+  </div>
+  <div class="sub-content">
+    <div class="section-block">
+      <div class="section-block-title">📥 JSONファイルを選択</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.7;">
+        エクスポートしたJSONファイルを選択してください。<br>機種変更時や復元時に使用します。
+      </div>
+      <div class="fg">
+        <label class="fl">インポート方法</label>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg4);">
+            <input type="radio" name="import-mode" value="overwrite" id="imp-overwrite" checked style="margin-top:2px;">
+            <div>
+              <div style="font-size:14px;font-weight:500;">上書き（完全置き換え）</div>
+              <div style="font-size:12px;color:var(--text3);">現在のデータをすべて削除してインポート。機種変更時に使用。</div>
+            </div>
+          </label>
+          <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg4);">
+            <input type="radio" name="import-mode" value="merge" id="imp-merge" style="margin-top:2px;">
+            <div>
+              <div style="font-size:14px;font-weight:500;">追記（マージ）</div>
+              <div style="font-size:12px;color:var(--text3);">既存データを保持しながら追加。部分的な復元時に使用。</div>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">JSONファイルを選択</label>
+        <input type="file" accept=".json" class="fi" id="import-file" onchange="previewImport()">
+      </div>
+      <div id="import-preview" style="display:none;" class="section-block" style="background:var(--bg3);">
+        <div class="section-block-title">📊 インポート内容の確認</div>
+        <div id="import-preview-content" style="font-size:13px;color:var(--text2);line-height:1.8;"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="import-exec-btn" onclick="executeImport()" style="display:none;">インポート実行</button>
+        <button class="btn btn-secondary" onclick="closeScreen('screen-import')">キャンセル</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PIN変更画面 ===== -->
+<div class="sub-screen" id="screen-pin-change">
+  <div class="sub-header">
+    <button class="sub-back" onclick="closeScreen('screen-pin-change')">←</button>
+    <div class="sub-title">PINコードの変更</div>
+  </div>
+  <div class="sub-content">
+    <div class="section-block">
+      <div class="fg"><label class="fl">新しいPIN（4桁）</label><input type="password" inputmode="numeric" maxlength="4" class="fi" id="new-pin" placeholder="4桁の数字"></div>
+      <div class="fg"><label class="fl">確認（もう一度）</label><input type="password" inputmode="numeric" maxlength="4" class="fi" id="confirm-pin" placeholder="4桁の数字"></div>
+      <div id="pin-change-msg" style="font-size:13px;min-height:18px;margin-bottom:10px;"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="changePin()">変更する</button>
+        <button class="btn btn-secondary" onclick="closeScreen('screen-pin-change')">閉じる</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 差出人マスタ画面 ===== -->
+<div class="sub-screen" id="screen-sender-master">
+  <div class="sub-header">
+    <button class="sub-back" onclick="closeScreen('screen-sender-master')">←</button>
+    <div class="sub-title">差出人マスタ</div>
+  </div>
+  <div class="sub-content">
+    <div class="section-block">
+      <div class="section-block-title">新規登録</div>
+      <div class="fg"><label class="fl">差出人名 *</label><input type="text" class="fi" id="sm-name" placeholder="例：日本年金機構"></div>
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;">
+        <div class="fg"><label class="fl">郵便番号</label><input type="text" class="fi" id="sm-zip" placeholder="000-0000"></div>
+        <div class="fg"><label class="fl">電話番号</label><input type="tel" class="fi" id="sm-tel" placeholder="00-0000-0000"></div>
+      </div>
+      <div class="fg"><label class="fl">住所</label><input type="text" class="fi" id="sm-addr" placeholder="例：東京都千代田区…"></div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="saveSender()">登録する</button></div>
+    </div>
+    <div class="sec-title">登録済み差出人</div>
+    <div id="sender-list"></div>
+    <div class="empty-state" id="sender-empty" style="display:none;">
+      <div class="empty-icon">👤</div>
+      <div class="empty-msg">差出人が登録されていません</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 自由タグ管理画面 ===== -->
+<div class="sub-screen" id="screen-tag-master">
+  <div class="sub-header">
+    <button class="sub-back" onclick="closeScreen('screen-tag-master')">←</button>
+    <div class="sub-title">自由タグ管理</div>
+  </div>
+  <div class="sub-content">
+    <div class="section-block">
+      <div class="section-block-title">新規タグ追加</div>
+      <div class="fg"><label class="fl">タグ名 *</label><input type="text" class="fi" id="tm-name" placeholder="例：確定申告2024"></div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="saveTag()">追加する</button></div>
+    </div>
+    <div class="sec-title">登録済みタグ</div>
+    <div id="tag-list"></div>
+    <div class="empty-state" id="tag-empty" style="display:none;">
+      <div class="empty-icon">🏷️</div>
+      <div class="empty-msg">自由タグが登録されていません</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== データ管理 =====
+const KEY = 'haha_app_v1';
+let db = {
+  pin: null,
+  mails: [],
+  senders: [],
+  customTags: [],
+  fileMaster: [],
+  locationMaster: [],
+  lastExportDate: null
+};
+
+function loadDB(){ try{ const d=localStorage.getItem(KEY); if(d) db=JSON.parse(d); }catch(e){} }
+function saveDB(){ try{ localStorage.setItem(KEY,JSON.stringify(db)); }catch(e){} }
+loadDB();
+
+// ===== 固定タグ =====
+const FIXED_TAGS = ['白色申告','重要書類','不動産','家族・友人'];
+
+function getAllTags(){ return [...FIXED_TAGS, ...db.customTags]; }
+
+// ===== 画像圧縮 =====
+function compressImage(file, maxW=1200, quality=0.7){
+  return new Promise(resolve=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const canvas = document.createElement('canvas');
+        let w=img.width, h=img.height;
+        if(w>maxW){ h=Math.round(h*maxW/w); w=maxW; }
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg',quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ===== PIN =====
+let pinBuf='', pinMode=db.pin?'verify':'setup', pinStep=1, pinFirst='';
+
+function initPin(){
+  if(pinMode==='setup'){
+    document.getElementById('pin-prompt').textContent='PINコードを設定してください（4桁）';
+    document.getElementById('pin-hint').textContent='初回起動時です。任意の4桁を設定してください';
+  }
+}
+function pi(n){
+  if(pinBuf.length>=4) return;
+  pinBuf+=n; updDots();
+  if(pinBuf.length===4) setTimeout(checkPin,200);
+}
+function pd(){ pinBuf=pinBuf.slice(0,-1); updDots(); }
+function updDots(){ for(let i=0;i<4;i++) document.getElementById('pd'+i).classList.toggle('filled',i<pinBuf.length); }
+
+function checkPin(){
+  if(pinMode==='verify'){
+    if(pinBuf===db.pin){ unlock(); }
+    else{ document.getElementById('pin-error').textContent='❌ PINが違います'; pinBuf=''; updDots(); }
+  } else {
+    if(pinStep===1){
+      pinFirst=pinBuf; pinBuf=''; updDots(); pinStep=2;
+      document.getElementById('pin-prompt').textContent='もう一度入力してください（確認）';
+      document.getElementById('pin-hint').textContent='';
+    } else {
+      if(pinBuf===pinFirst){ db.pin=pinBuf; saveDB(); unlock(); }
+      else{
+        document.getElementById('pin-error').textContent='❌ 一致しません。最初からやり直してください';
+        pinBuf=''; pinFirst=''; pinStep=1; updDots();
+        document.getElementById('pin-prompt').textContent='PINコードを設定してください（4桁）';
+      }
+    }
+  }
+}
+function unlock(){
+  document.getElementById('pin-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('fab').classList.add('visible');
+  renderAll();
+}
+function lockApp(){
+  pinBuf=''; pinMode='verify'; updDots();
+  document.getElementById('pin-error').textContent='';
+  document.getElementById('pin-prompt').textContent='PINコードを入力してください';
+  document.getElementById('app').style.display='none';
+  document.getElementById('fab').classList.remove('visible');
+  document.getElementById('pin-screen').style.display='flex';
+  closeAllScreens();
+}
+function changePin(){
+  const np=document.getElementById('new-pin').value;
+  const cp=document.getElementById('confirm-pin').value;
+  const msg=document.getElementById('pin-change-msg');
+  if(!/^\d{4}$/.test(np)){msg.style.color='red';msg.textContent='4桁の数字を入力してください';return;}
+  if(np!==cp){msg.style.color='red';msg.textContent='PINが一致しません';return;}
+  db.pin=np; saveDB(); msg.style.color='green'; msg.textContent='✓ PINを変更しました';
+  document.getElementById('new-pin').value=''; document.getElementById('confirm-pin').value='';
+}
+
+// ===== タブ =====
+function showTab(tab){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('fab').classList.toggle('visible', tab==='mail');
+}
+
+// ===== サブ画面 =====
+function openScreen(id){ document.getElementById(id).classList.add('active'); }
+function closeScreen(id){ document.getElementById(id).classList.remove('active'); }
+function closeAllScreens(){ document.querySelectorAll('.sub-screen').forEach(s=>s.classList.remove('active')); }
+
+// ===== フィルタ状態 =====
+let filterState = { mode:'miatari', tags:[], sender:'', year:'' };
+let filterOpen = false;
+
+function setMode(m){
+  filterState.mode=m;
+  document.getElementById('mode-miatari').classList.toggle('active',m==='miatari');
+  document.getElementById('mode-all').classList.toggle('active',m==='all');
+  renderMailList();
+}
+
+function toggleFilter(){
+  filterOpen=!filterOpen;
+  document.getElementById('filter-panel').classList.toggle('open',filterOpen);
+  document.getElementById('filter-toggle-btn').textContent='';
+  const cnt=countActiveFilters();
+  document.getElementById('filter-toggle-btn').innerHTML=filterOpen
+    ?`<span>閉じる</span>`
+    :`<span>絞り込み</span>${cnt>0?`<span style="background:var(--accent2);color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;">${cnt}</span>`:''}`;
+  document.getElementById('filter-toggle-btn').classList.toggle('has-filter',cnt>0);
+}
+
+function countActiveFilters(){
+  return filterState.tags.length + (filterState.sender?1:0) + (filterState.year?1:0);
+}
+
+function buildFilterUI(){
+  // タグ
+  const wrap=document.getElementById('filter-tags'); wrap.innerHTML='';
+  getAllTags().forEach(t=>{
+    const btn=document.createElement('button');
+    btn.className='filter-tag'+(filterState.tags.includes(t)?' active':'');
+    btn.textContent=t;
+    btn.onclick=()=>{
+      if(filterState.tags.includes(t)) filterState.tags=filterState.tags.filter(x=>x!==t);
+      else filterState.tags.push(t);
+      btn.classList.toggle('active',filterState.tags.includes(t));
+      applyFilter();
+    };
+    wrap.appendChild(btn);
+  });
+  // 差出人
+  const sel=document.getElementById('filter-sender');
+  const curSender=sel.value;
+  sel.innerHTML='<option value="">すべて</option>';
+  [...new Set(db.mails.map(m=>m.senderName).filter(Boolean))].sort().forEach(s=>{
+    const opt=document.createElement('option');
+    opt.value=s; opt.textContent=s;
+    if(s===curSender) opt.selected=true;
+    sel.appendChild(opt);
+  });
+  // 受領年
+  const ySel=document.getElementById('filter-year');
+  const curYear=ySel.value;
+  ySel.innerHTML='<option value="">すべて</option>';
+  [...new Set(db.mails.map(m=>m.date?m.date.slice(0,4):null).filter(Boolean))].sort().reverse().forEach(y=>{
+    const opt=document.createElement('option');
+    opt.value=y; opt.textContent=y+'年';
+    if(y===curYear) opt.selected=true;
+    ySel.appendChild(opt);
+  });
+}
+
+function applyFilter(){
+  filterState.sender=document.getElementById('filter-sender').value;
+  filterState.year=document.getElementById('filter-year').value;
+  const cnt=countActiveFilters();
+  const btn=document.getElementById('filter-toggle-btn');
+  btn.innerHTML=filterOpen
+    ?`<span>閉じる</span>`
+    :`<span>絞り込み</span>${cnt>0?`<span style="background:var(--accent2);color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;">${cnt}</span>`:''}`;
+  btn.classList.toggle('has-filter',cnt>0);
+  renderMailList();
+}
+
+function filterMails(){
+  let list=[...db.mails];
+  // 未対応のみ
+  if(filterState.mode==='miatari') list=list.filter(m=>!m.kanryo);
+  // タグ（「到着監視」タグはkanshiフラグとも連動）
+  if(filterState.tags.length>0) list=list.filter(m=>{
+    const effectiveTags=[...(m.tags||[])];
+    if(m.kanshi && !effectiveTags.includes('到着監視')) effectiveTags.push('到着監視');
+    return filterState.tags.every(t=>effectiveTags.includes(t));
+  });
+  // 差出人
+  if(filterState.sender) list=list.filter(m=>m.senderName===filterState.sender);
+  // 受領年
+  if(filterState.year) list=list.filter(m=>m.date&&m.date.startsWith(filterState.year));
+  // 日付降順
+  list.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  return list;
+}
+
+// ===== アラートチェック =====
+function checkAlerts(){
+  const today=new Date(); today.setHours(0,0,0,0);
+  const alerts=[];
+  db.mails.forEach(m=>{
+    // 到着監視ON・到着予定日あり・受取日未入力・対応完了でない場合のみアラート
+    if(m.kanshi && m.kanshiDate && !m.date && !m.kanryo){
+      const d=new Date(m.kanshiDate);
+      if(d<today) alerts.push(m);
+    }
+  });
+  // バナー
+  const banner=document.getElementById('mail-alert-banner');
+  if(alerts.length>0){
+    banner.innerHTML=`<div class="alert-banner danger">⚠️ <strong>到着遅延</strong><br>`+
+      alerts.map(m=>`${m.title}（到着予定：${m.kanshiDate}）`).join('<br>')+`</div>`;
+  } else { banner.innerHTML=''; }
+  // ヘッダーバッジ
+  const badge=document.getElementById('header-badge');
+  if(alerts.length>0){ badge.textContent='⚠️ '+alerts.length+'件'; badge.style.display='inline-block'; }
+  else badge.style.display='none';
+}
+
+// ===== 郵便物レンダリング =====
+function renderMailList(){
+  const list=filterMails();
+  const container=document.getElementById('mail-list');
+  const empty=document.getElementById('mail-empty');
+  container.innerHTML='';
+  if(list.length===0){ empty.style.display='block'; return; }
+  empty.style.display='none';
+
+  const today=new Date(); today.setHours(0,0,0,0);
+
+  list.forEach(m=>{
+    // 受取日未入力・到着予定日超過・対応完了でない場合のみアラート
+    const isKanshiAlert=m.kanshi&&m.kanshiDate&&!m.date&&!m.kanryo&&new Date(m.kanshiDate)<today;
+    // 到着監視ON・受取日入力済み → 到着済みバッジ
+    const isKanshiDone=m.kanshi&&m.kanshiDate&&!!m.date;
+    const div=document.createElement('div');
+    div.className='mail-card'+(m.kanryo?' done':'')+(isKanshiAlert?' kanshi-alert':'');
+
+    // 対応状況チップ
+    const taiouItems=[
+      {key:'kokoku',label:'申告済'},
+      {key:'pdf',label:'PDF'},
+      {key:'filing',label:'ファイル'},
+      {key:'haiki',label:'破棄'},
+    ];
+    const chips=taiouItems.map(t=>{
+      const done=(m.taiou||{})[t.key]?.done;
+      return `<span class="status-chip ${done?'sc-done':'sc-todo'}">${done?'✓':'○'} ${t.label}</span>`;
+    }).join('');
+
+    // タグ表示
+    const tagsHtml=(m.tags||[]).map(t=>{
+      const isKanshi=t==='到着監視';
+      return `<span class="tag${isKanshi?' tag-kanshi':''}">${t}</span>`;
+    }).join('');
+
+    // 到着済みバッジ
+    const kanshiBadge=isKanshiDone
+      ?`<span class="status-chip sc-done" style="background:#e8f5ee;color:#2e7d52;">✅ 到着済</span>`
+      :isKanshiAlert
+      ?`<span class="status-chip" style="background:#fdecea;color:#b83232;">⚠️ 到着遅延</span>`
+      :'';
+
+    div.innerHTML=`
+      <div class="mail-card-inner">
+        <div class="mail-card-top">
+          <div class="mail-card-title">${m.title||'（無題）'}</div>
+          <span class="kanryo-badge ${m.kanryo?'kb-done':'kb-todo'}">${m.kanryo?'完了':'未対応'}</span>
+        </div>
+        <div class="mail-card-meta">${m.senderName||''}${m.senderName&&m.date?' ・ ':''}${m.date||''}</div>
+        ${tagsHtml?`<div class="mail-card-tags">${tagsHtml}</div>`:''}
+        <div class="mail-card-status">
+          ${kanshiBadge}
+          ${chips}
+        </div>
+        ${m.amount?`<div style="font-size:14px;font-weight:700;color:var(--accent2);margin-top:5px;">¥${Number(m.amount).toLocaleString()}</div>`:''}
+      </div>
+    `;
+    div.onclick=()=>openMailEdit(m.id);
+    container.appendChild(div);
+  });
+}
+
+// ===== PDF リンク行 =====
+let pdfRowCount=0;
+function addPdfLinkRow(wrapId, name='', url=''){
+  const wrap=document.getElementById(wrapId);
+  const id='plr-'+pdfRowCount++;
+  const div=document.createElement('div');
+  div.className='pdf-link-row'; div.id=id;
+  div.innerHTML=`
+    <input type="text" placeholder="名称（例：月次報告書）" value="${name}">
+    <input type="url" placeholder="https://drive.google.com/..." value="${url}">
+    <button class="btn-del-row" onclick="document.getElementById('${id}').remove()">✕</button>
+  `;
+  wrap.appendChild(div);
+}
+function getPdfLinks(wrapId){
+  return [...document.getElementById(wrapId).querySelectorAll('.pdf-link-row')].map(r=>{
+    const ins=r.querySelectorAll('input');
+    return {name:ins[0].value.trim(),url:ins[1].value.trim()};
+  }).filter(l=>l.url);
+}
+
+// ===== 写真スロット =====
+function buildPhotoSlots(wrapId, photos=[]){
+  const wrap=document.getElementById(wrapId); wrap.innerHTML='';
+  const labels=['表面','裏面','保管場所','その他'];
+  for(let i=0;i<4;i++){
+    const slot=document.createElement('div');
+    slot.className='img-slot'; slot.id=`${wrapId}-slot-${i}`;
+    const fileInput=document.createElement('input');
+    fileInput.type='file'; fileInput.accept='image/*'; fileInput.style.display='none';
+    fileInput.onchange=async e=>{
+      const file=e.target.files[0]; if(!file) return;
+      const compressed=await compressImage(file);
+      slot.innerHTML='';
+      const img=document.createElement('img'); img.src=compressed;
+      const delBtn=document.createElement('button'); delBtn.className='img-del'; delBtn.textContent='✕';
+      delBtn.onclick=e=>{ e.stopPropagation(); buildPhotoSlots(wrapId, getPhotos(wrapId).map((p,j)=>j===i?null:p).filter(x=>x!==undefined)); };
+      slot.appendChild(img); slot.appendChild(delBtn);
+      slot.dataset.img=compressed;
+      slot.onclick=null;
+    };
+    slot.appendChild(fileInput);
+    if(photos[i]){
+      const img=document.createElement('img'); img.src=photos[i];
+      const delBtn=document.createElement('button'); delBtn.className='img-del'; delBtn.textContent='✕';
+      delBtn.onclick=e=>{ e.stopPropagation(); slot.innerHTML=''; buildPhotoSlot(slot,i,wrapId,labels); slot.dataset.img=''; };
+      slot.appendChild(img); slot.appendChild(delBtn);
+      slot.dataset.img=photos[i];
+    } else {
+      buildPhotoSlot(slot,i,wrapId,labels);
+    }
+    wrap.appendChild(slot);
+  }
+}
+function buildPhotoSlot(slot,i,wrapId,labels){
+  slot.innerHTML=`<div class="img-icon">📷</div><div class="img-label">${labels[i]}</div>`;
+  slot.dataset.img='';
+  slot.onclick=()=>slot.querySelector('input[type=file]')?.click()||slot.nextSibling?.click();
+  // fileInputを再追加
+  const fi=document.createElement('input'); fi.type='file'; fi.accept='image/*'; fi.style.display='none';
+  fi.onchange=async e=>{
+    const file=e.target.files[0]; if(!file) return;
+    const compressed=await compressImage(file);
+    slot.innerHTML='';
+    const img=document.createElement('img'); img.src=compressed;
+    const delBtn=document.createElement('button'); delBtn.className='img-del'; delBtn.textContent='✕';
+    delBtn.onclick=ev=>{ ev.stopPropagation(); buildPhotoSlot(slot,i,wrapId,labels); };
+    slot.appendChild(img); slot.appendChild(delBtn);
+    slot.dataset.img=compressed; slot.onclick=null;
+  };
+  slot.appendChild(fi);
+  slot.onclick=()=>fi.click();
+}
+function getPhotos(wrapId){
+  return [...document.getElementById(wrapId).querySelectorAll('.img-slot')].map(s=>s.dataset.img||'');
+}
+
+// ===== 対応状況 =====
+let taiouState={};
+function initTaiou(data){
+  taiouState=data||{};
+  buildFilingSelects();
+  ['kokoku','pdf','filing','haiki'].forEach(k=>{
+    const chk=document.getElementById('chk-'+k);
+    const ts=document.getElementById('ts-'+k);
+    const sub=document.getElementById('sub-'+k);
+    const d=taiouState[k]||{};
+    chk.classList.toggle('checked',!!d.done);
+    ts.textContent=d.done&&d.ts?d.ts:'';
+    if(sub){ sub.style.display=d.done?'block':'none'; }
+    if(k==='pdf'&&d.url) document.getElementById('taiou-pdf-url').value=d.url||'';
+    if(k==='filing'){
+      if(d.name){
+        const sel=document.getElementById('taiou-filing-name');
+        const opt=[...sel.options].find(o=>o.value===d.name);
+        if(opt) sel.value=d.name;
+        else document.getElementById('taiou-filing-name-input').value=d.name;
+      }
+      if(d.loc){
+        const sel=document.getElementById('taiou-filing-loc');
+        const opt=[...sel.options].find(o=>o.value===d.loc);
+        if(opt) sel.value=d.loc;
+        else document.getElementById('taiou-filing-loc-input').value=d.loc;
+      }
+    }
+  });
+  const kanryo=document.getElementById('chk-kanryo');
+  kanryo.classList.toggle('checked',!!taiouState.kanryo);
+}
+function toggleTaiou(k){
+  if(!taiouState[k]) taiouState[k]={};
+  taiouState[k].done=!taiouState[k].done;
+  if(taiouState[k].done) taiouState[k].ts=new Date().toLocaleString('ja-JP');
+  else taiouState[k].ts='';
+  const chk=document.getElementById('chk-'+k);
+  const ts=document.getElementById('ts-'+k);
+  const sub=document.getElementById('sub-'+k);
+  chk.classList.toggle('checked',taiouState[k].done);
+  ts.textContent=taiouState[k].ts||'';
+  if(sub) sub.style.display=taiouState[k].done?'block':'none';
+}
+function toggleKanryo(){
+  taiouState.kanryo=!taiouState.kanryo;
+  document.getElementById('chk-kanryo').classList.toggle('checked',taiouState.kanryo);
+}
+function getTaiouData(){
+  const d={...taiouState};
+  if(d.pdf) d.pdf.url=document.getElementById('taiou-pdf-url').value.trim();
+  if(d.filing){
+    const fnSel=document.getElementById('taiou-filing-name').value;
+    const fnInput=document.getElementById('taiou-filing-name-input').value.trim();
+    d.filing.name=fnSel||fnInput;
+    const locSel=document.getElementById('taiou-filing-loc').value;
+    const locInput=document.getElementById('taiou-filing-loc-input').value.trim();
+    d.filing.loc=locSel||locInput;
+  }
+  d.kanryo=!!d.kanryo;
+  return d;
+}
+
+// ===== タグUI =====
+function buildTagsUI(wrapId, selected=[]){
+  const wrap=document.getElementById(wrapId); wrap.innerHTML='';
+  getAllTags().forEach(t=>{
+    const btn=document.createElement('button');
+    btn.className='tag'+(selected.includes(t)?'  active-tag':'');
+    btn.textContent=t;
+    btn.style.cursor='pointer'; btn.style.border='1px solid var(--border)';
+    btn.onclick=()=>{
+      btn.classList.toggle('active-tag');
+    };
+    wrap.appendChild(btn);
+  });
+}
+function getSelectedTags(wrapId){
+  return [...document.getElementById(wrapId).querySelectorAll('.active-tag')].map(b=>b.textContent);
+}
+
+// ===== 差出人選択 =====
+function buildSenderSelect(){
+  const sel=document.getElementById('me-sender-select');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">選択または新規入力</option>';
+  db.senders.forEach(s=>{
+    const opt=document.createElement('option');
+    opt.value=s.id; opt.textContent=s.name;
+    if(s.id===cur) opt.selected=true;
+    sel.appendChild(opt);
+  });
+}
+function onSenderSelect(){
+  const id=document.getElementById('me-sender-select').value;
+  const sender=db.senders.find(s=>s.id===id);
+  if(sender){
+    document.getElementById('me-sender-name').value=sender.name||'';
+    document.getElementById('me-sender-zip').value=sender.zip||'';
+    document.getElementById('me-sender-tel').value=sender.tel||'';
+    document.getElementById('me-sender-addr').value=sender.addr||'';
+    document.getElementById('me-save-sender-wrap').style.display='none';
+  } else {
+    document.getElementById('me-sender-name').value='';
+    document.getElementById('me-sender-zip').value='';
+    document.getElementById('me-sender-tel').value='';
+    document.getElementById('me-sender-addr').value='';
+    document.getElementById('me-save-sender-wrap').style.display='block';
+  }
+}
+
+// ===== 到着監視UI =====
+function toggleKanshi(){
+  const checked=document.getElementById('me-kanshi').checked;
+  document.getElementById('me-kanshi-detail').style.display=checked?'block':'none';
+}
+
+// ===== 郵便物 編集画面 =====
+function openMailEdit(id){
+  const mail=id?db.mails.find(m=>m.id===id):null;
+  document.getElementById('mail-edit-title').textContent=mail?'郵便物を編集':'郵便物を記録';
+  document.getElementById('me-id').value=id||'';
+  document.getElementById('me-title').value=mail?.title||'';
+  document.getElementById('me-title-err').style.display='none';
+  document.getElementById('me-date').value=mail?.date||new Date().toISOString().slice(0,10);
+  document.getElementById('me-amount').value=mail?.amount||'';
+  document.getElementById('me-memo').value=mail?.memo||'';
+  document.getElementById('me-del-btn').style.display=id?'inline-block':'none';
+
+  // 差出人
+  buildSenderSelect();
+  if(mail?.senderId){
+    document.getElementById('me-sender-select').value=mail.senderId;
+    onSenderSelect();
+  } else {
+    document.getElementById('me-sender-select').value='';
+    document.getElementById('me-sender-name').value=mail?.senderName||'';
+    document.getElementById('me-sender-zip').value=mail?.senderZip||'';
+    document.getElementById('me-sender-tel').value=mail?.senderTel||'';
+    document.getElementById('me-sender-addr').value=mail?.senderAddr||'';
+    document.getElementById('me-save-sender-wrap').style.display='block';
+  }
+
+  // タグ
+  buildTagsUI('me-tags-wrap', mail?.tags||[]);
+
+  // 到着監視
+  const kanshi=!!(mail?.kanshi);
+  document.getElementById('me-kanshi').checked=kanshi;
+  document.getElementById('me-kanshi-detail').style.display=kanshi?'block':'none';
+  document.getElementById('me-kanshi-date').value=mail?.kanshiDate||'';
+
+  // PDF リンク
+  document.getElementById('me-pdf-links').innerHTML='';
+  pdfRowCount=0;
+  if(mail?.pdfLinks?.length>0) mail.pdfLinks.forEach(l=>addPdfLinkRow('me-pdf-links',l.name,l.url));
+
+  // 写真
+  buildPhotoSlots('me-photos', mail?.photos||[]);
+
+  // 対応状況
+  initTaiou(mail?.taiou||{});
+
+  openScreen('screen-mail-edit');
+}
+
+function closeMailEdit(){ closeScreen('screen-mail-edit'); }
+
+function saveMail(){
+  const title=document.getElementById('me-title').value.trim();
+  if(!title){
+    document.getElementById('me-title-err').style.display='block';
+    document.getElementById('me-title').focus();
+    return;
+  }
+  document.getElementById('me-title-err').style.display='none';
+
+  const id=document.getElementById('me-id').value||Date.now().toString();
+  const senderId=document.getElementById('me-sender-select').value;
+  const senderName=document.getElementById('me-sender-name').value.trim();
+
+  // 差出人をマスタ保存
+  if(!senderId && senderName && document.getElementById('me-save-sender').checked){
+    const newSender={
+      id: Date.now().toString(),
+      name: senderName,
+      zip: document.getElementById('me-sender-zip').value.trim(),
+      tel: document.getElementById('me-sender-tel').value.trim(),
+      addr: document.getElementById('me-sender-addr').value.trim()
+    };
+    db.senders.push(newSender);
+  }
+
+  const taiouData=getTaiouData();
+  const rec={
+    id,
+    title,
+    senderId: senderId||null,
+    senderName: senderId?(db.senders.find(s=>s.id===senderId)?.name||senderName):senderName,
+    senderZip: document.getElementById('me-sender-zip').value.trim(),
+    senderTel: document.getElementById('me-sender-tel').value.trim(),
+    senderAddr: document.getElementById('me-sender-addr').value.trim(),
+    date: document.getElementById('me-date').value,
+    amount: document.getElementById('me-amount').value,
+    tags: getSelectedTags('me-tags-wrap'),
+    kanshi: document.getElementById('me-kanshi').checked,
+    kanshiDate: document.getElementById('me-kanshi-date').value,
+    memo: document.getElementById('me-memo').value.trim(),
+    pdfLinks: getPdfLinks('me-pdf-links'),
+    photos: getPhotos('me-photos'),
+    taiou: taiouData,
+    kanryo: taiouData.kanryo||false
+  };
+
+  const idx=db.mails.findIndex(m=>m.id===id);
+  if(idx>=0) db.mails[idx]=rec; else db.mails.push(rec);
+  saveDB();
+  closeMailEdit();
+  renderMailList();
+  buildFilterUI();
+  checkAlerts();
+}
+
+function deleteMail(){
+  const id=document.getElementById('me-id').value;
+  if(!id||!confirm('この郵便物を削除しますか？')) return;
+  db.mails=db.mails.filter(m=>m.id!==id);
+  saveDB(); closeMailEdit(); renderMailList(); buildFilterUI(); checkAlerts();
+}
+
+// ===== 差出人マスタ =====
+function openSenderMaster(){ renderSenderList(); openScreen('screen-sender-master'); }
+function saveSender(){
+  const name=document.getElementById('sm-name').value.trim();
+  if(!name){alert('差出人名を入力してください');return;}
+  db.senders.push({
+    id:Date.now().toString(), name,
+    zip:document.getElementById('sm-zip').value.trim(),
+    tel:document.getElementById('sm-tel').value.trim(),
+    addr:document.getElementById('sm-addr').value.trim()
+  });
+  saveDB();
+  document.getElementById('sm-name').value='';
+  document.getElementById('sm-zip').value='';
+  document.getElementById('sm-tel').value='';
+  document.getElementById('sm-addr').value='';
+  renderSenderList();
+  updateSettingsCounts();
+}
+function deleteSender(id){
+  if(!confirm('この差出人を削除しますか？')) return;
+  db.senders=db.senders.filter(s=>s.id!==id);
+  saveDB(); renderSenderList(); updateSettingsCounts();
+}
+function renderSenderList(){
+  const list=document.getElementById('sender-list');
+  const empty=document.getElementById('sender-empty');
+  list.innerHTML='';
+  if(db.senders.length===0){empty.style.display='block';return;}
+  empty.style.display='none';
+  db.senders.forEach(s=>{
+    const div=document.createElement('div'); div.className='sender-item';
+    div.innerHTML=`
+      <div>
+        <div class="sender-name">${s.name}</div>
+        <div class="sender-sub">${[s.zip,s.addr,s.tel].filter(Boolean).join(' ・ ')}</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-secondary btn-sm" onclick="openSenderEdit('${s.id}')">編集</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSender('${s.id}')">削除</button>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function openSenderEdit(id){
+  const s=db.senders.find(x=>x.id===id); if(!s) return;
+  document.getElementById('se-id').value=id;
+  document.getElementById('se-name').value=s.name||'';
+  document.getElementById('se-zip').value=s.zip||'';
+  document.getElementById('se-tel').value=s.tel||'';
+  document.getElementById('se-addr').value=s.addr||'';
+  openScreen('screen-sender-edit');
+}
+function updateSender(){
+  const id=document.getElementById('se-id').value;
+  const name=document.getElementById('se-name').value.trim();
+  if(!name){alert('差出人名を入力してください');return;}
+  const idx=db.senders.findIndex(s=>s.id===id); if(idx<0) return;
+  db.senders[idx]={...db.senders[idx], name,
+    zip:document.getElementById('se-zip').value.trim(),
+    tel:document.getElementById('se-tel').value.trim(),
+    addr:document.getElementById('se-addr').value.trim()
+  };
+  saveDB(); closeScreen('screen-sender-edit'); renderSenderList(); updateSettingsCounts();
+}
+
+// ===== 自由タグ管理 =====
+function openTagMaster(){ renderTagList(); openScreen('screen-tag-master'); }
+function saveTag(){
+  const name=document.getElementById('tm-name').value.trim();
+  if(!name){alert('タグ名を入力してください');return;}
+  if(getAllTags().includes(name)){alert('同じ名前のタグが既に存在します');return;}
+  db.customTags.push(name);
+  saveDB();
+  document.getElementById('tm-name').value='';
+  renderTagList(); updateSettingsCounts();
+}
+function deleteTag(name){
+  if(!confirm(`タグ「${name}」を削除しますか？`)) return;
+  db.customTags=db.customTags.filter(t=>t!==name);
+  saveDB(); renderTagList(); updateSettingsCounts();
+}
+function renderTagList(){
+  const list=document.getElementById('tag-list');
+  const empty=document.getElementById('tag-empty');
+  list.innerHTML='';
+  if(db.customTags.length===0){empty.style.display='block';return;}
+  empty.style.display='none';
+  db.customTags.forEach(t=>{
+    const div=document.createElement('div'); div.className='sender-item';
+    div.innerHTML=`
+      <div class="sender-name">🏷️ ${t}</div>
+      <button class="btn btn-danger btn-sm" onclick="deleteTag('${t}')">削除</button>
+    `;
+    list.appendChild(div);
+  });
+}
+
+// ===== ファイル名マスタ =====
+function openFileMaster(){ renderFileMasterList(); openScreen('screen-file-master'); }
+function saveFileMaster(){
+  const name=document.getElementById('fm-name').value.trim();
+  if(!name){alert('ファイル名を入力してください');return;}
+  if((db.fileMaster||[]).includes(name)){alert('同じファイル名が既に存在します');return;}
+  if(!db.fileMaster) db.fileMaster=[];
+  db.fileMaster.push(name); saveDB();
+  document.getElementById('fm-name').value='';
+  renderFileMasterList(); updateSettingsCounts();
+}
+function deleteFileMaster(name){
+  if(!confirm(`「${name}」を削除しますか？`)) return;
+  db.fileMaster=db.fileMaster.filter(f=>f!==name);
+  saveDB(); renderFileMasterList(); updateSettingsCounts();
+}
+function renderFileMasterList(){
+  const list=document.getElementById('file-master-list');
+  const empty=document.getElementById('file-master-empty');
+  list.innerHTML='';
+  if(!(db.fileMaster||[]).length){empty.style.display='block';return;}
+  empty.style.display='none';
+  db.fileMaster.forEach(f=>{
+    const div=document.createElement('div'); div.className='sender-item';
+    div.innerHTML=`<div class="sender-name">📁 ${f}</div><button class="btn btn-danger btn-sm" onclick="deleteFileMaster('${f}')">削除</button>`;
+    list.appendChild(div);
+  });
+}
+
+// ===== 保管場所マスタ =====
+function openLocationMaster(){ renderLocationMasterList(); openScreen('screen-location-master'); }
+function saveLocationMaster(){
+  const name=document.getElementById('lm-name').value.trim();
+  if(!name){alert('保管場所を入力してください');return;}
+  if((db.locationMaster||[]).includes(name)){alert('同じ保管場所が既に存在します');return;}
+  if(!db.locationMaster) db.locationMaster=[];
+  db.locationMaster.push(name); saveDB();
+  document.getElementById('lm-name').value='';
+  renderLocationMasterList(); updateSettingsCounts();
+}
+function deleteLocationMaster(name){
+  if(!confirm(`「${name}」を削除しますか？`)) return;
+  db.locationMaster=db.locationMaster.filter(l=>l!==name);
+  saveDB(); renderLocationMasterList(); updateSettingsCounts();
+}
+function renderLocationMasterList(){
+  const list=document.getElementById('location-master-list');
+  const empty=document.getElementById('location-master-empty');
+  list.innerHTML='';
+  if(!(db.locationMaster||[]).length){empty.style.display='block';return;}
+  empty.style.display='none';
+  db.locationMaster.forEach(l=>{
+    const div=document.createElement('div'); div.className='sender-item';
+    div.innerHTML=`<div class="sender-name">📦 ${l}</div><button class="btn btn-danger btn-sm" onclick="deleteLocationMaster('${l}')">削除</button>`;
+    list.appendChild(div);
+  });
+}
+
+// ===== ファイリングマスタをselectに反映 =====
+function buildFilingSelects(){
+  const fnSel=document.getElementById('taiou-filing-name');
+  const locSel=document.getElementById('taiou-filing-loc');
+  if(!fnSel||!locSel) return;
+  const curFn=fnSel.value; const curLoc=locSel.value;
+  fnSel.innerHTML='<option value="">ファイル名を選択</option>';
+  (db.fileMaster||[]).forEach(f=>{ const o=document.createElement('option'); o.value=f; o.textContent=f; if(f===curFn) o.selected=true; fnSel.appendChild(o); });
+  locSel.innerHTML='<option value="">保管場所を選択</option>';
+  (db.locationMaster||[]).forEach(l=>{ const o=document.createElement('option'); o.value=l; o.textContent=l; if(l===curLoc) o.selected=true; locSel.appendChild(o); });
+}
+
+// ===== インポート =====
+let importData=null;
+function openImport(){
+  importData=null;
+  document.getElementById('import-file').value='';
+  document.getElementById('import-preview').style.display='none';
+  document.getElementById('import-exec-btn').style.display='none';
+  openScreen('screen-import');
+}
+function previewImport(){
+  const file=document.getElementById('import-file').files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      importData=JSON.parse(e.target.result);
+      const preview=document.getElementById('import-preview');
+      const content=document.getElementById('import-preview-content');
+      content.innerHTML=`
+        郵便物：<strong>${(importData.mails||[]).length}件</strong><br>
+        差出人マスタ：<strong>${(importData.senders||[]).length}件</strong><br>
+        自由タグ：<strong>${(importData.customTags||[]).length}件</strong><br>
+        ファイル名マスタ：<strong>${(importData.fileMaster||[]).length}件</strong><br>
+        保管場所マスタ：<strong>${(importData.locationMaster||[]).length}件</strong>
+      `;
+      preview.style.display='block';
+      document.getElementById('import-exec-btn').style.display='inline-block';
+    }catch(err){ alert('JSONファイルの読み込みに失敗しました。正しいファイルか確認してください。'); }
+  };
+  reader.readAsText(file);
+}
+function executeImport(){
+  if(!importData){ alert('ファイルを選択してください'); return; }
+  const mode=document.querySelector('input[name="import-mode"]:checked').value;
+  if(mode==='overwrite'){
+    if(!confirm('現在のデータをすべて削除してインポートします。よろしいですか？')) return;
+    const pin=db.pin;
+    db={...importData, pin}; // PINは現在のものを維持
+  } else {
+    if(!confirm('既存データに追記します。よろしいですか？')) return;
+    db.mails=[...db.mails,...(importData.mails||[]).filter(m=>!db.mails.find(x=>x.id===m.id))];
+    db.senders=[...db.senders,...(importData.senders||[]).filter(s=>!db.senders.find(x=>x.id===s.id))];
+    db.customTags=[...new Set([...db.customTags,...(importData.customTags||[])])];
+    db.fileMaster=[...new Set([...( db.fileMaster||[]),...(importData.fileMaster||[])])];
+    db.locationMaster=[...new Set([...(db.locationMaster||[]),...(importData.locationMaster||[])])];
+  }
+  saveDB(); closeScreen('screen-import'); renderAll();
+  alert('✓ インポートが完了しました');
+}
+
+// ===== バックアップリマインダー =====
+function checkBackupReminder(){
+  const exportSub=document.getElementById('export-sub');
+  const last=db.lastExportDate;
+  if(!last){
+    exportSub.textContent='まだバックアップされていません';
+    exportSub.style.color='var(--danger)';
+    return true;
+  }
+  const days=Math.floor((Date.now()-new Date(last).getTime())/86400000);
+  if(days>=90){
+    exportSub.textContent=`⚠️ 最終バックアップから${days}日経過`;
+    exportSub.style.color='var(--warning)';
+    return true;
+  }
+  exportSub.textContent=`最終バックアップ：${last}`;
+  exportSub.style.color='var(--text3)';
+  return false;
+}
+
+// ===== 設定 =====
+function openPinChange(){ openScreen('screen-pin-change'); }
+function updateSettingsCounts(){
+  document.getElementById('sender-master-count').textContent=db.senders.length+'件登録済み';
+  document.getElementById('tag-master-count').textContent=db.customTags.length+'件登録済み';
+  document.getElementById('file-master-count').textContent=(db.fileMaster||[]).length+'件登録済み';
+  document.getElementById('location-master-count').textContent=(db.locationMaster||[]).length+'件登録済み';
+  checkBackupReminder();
+}
+function exportData(){
+  db.lastExportDate=new Date().toLocaleDateString('ja-JP');
+  saveDB();
+  const blob=new Blob([JSON.stringify({...db,pin:'(hidden)'},null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`haha_app_${new Date().toISOString().slice(0,10)}.json`; a.click();
+  updateSettingsCounts();
+}
+function resetData(){
+  if(!confirm('⚠️ 全てのデータを削除します。この操作は取り消せません。')) return;
+  if(!confirm('本当に削除しますか？')) return;
+  const pin=db.pin; db={pin,mails:[],senders:[],customTags:[],fileMaster:[],locationMaster:[],lastExportDate:null};
+  saveDB(); renderAll(); alert('データを削除しました');
+}
+
+// ===== 全体レンダリング =====
+function renderAll(){
+  buildFilterUI();
+  renderMailList();
+  checkAlerts();
+  updateSettingsCounts();
+  checkBackupReminder();
+}
+
+// ===== 起動 =====
+initPin();
+</script>
+</body>
+</html>
