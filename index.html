@@ -247,7 +247,7 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <div id="pin-screen">
   <div class="pin-logo">📬</div>
   <div class="pin-title">母の管理アプリ</div>
-  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v1.7</div>
+  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v1.8</div>
   <p id="pin-prompt">PINコードを入力してください</p>
   <div class="pin-dots">
     <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
@@ -731,7 +731,8 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
     <div class="sub-title">差出人マスタ</div>
   </div>
   <div class="sub-content">
-    <div class="section-block">
+    <!-- 新規登録フォーム -->
+    <div class="section-block" id="sm-add-form">
       <div class="section-block-title">新規登録</div>
       <div class="fg"><label class="fl">差出人名 *</label><input type="text" class="fi" id="sm-name" placeholder="例：日本年金機構"></div>
       <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;">
@@ -740,6 +741,21 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
       </div>
       <div class="fg"><label class="fl">住所</label><input type="text" class="fi" id="sm-addr" placeholder="例：東京都千代田区…"></div>
       <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="saveSender()">登録する</button></div>
+    </div>
+    <!-- インライン編集フォーム（編集時のみ表示） -->
+    <div class="section-block" id="sm-edit-form" style="display:none;border:2px solid var(--accent);border-radius:var(--radius);">
+      <div class="section-block-title">✏️ 編集中</div>
+      <input type="hidden" id="se-id">
+      <div class="fg"><label class="fl">差出人名 *</label><input type="text" class="fi" id="se-name"></div>
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;">
+        <div class="fg"><label class="fl">郵便番号</label><input type="text" class="fi" id="se-zip"></div>
+        <div class="fg"><label class="fl">電話番号</label><input type="tel" class="fi" id="se-tel"></div>
+      </div>
+      <div class="fg"><label class="fl">住所</label><input type="text" class="fi" id="se-addr"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary btn-sm" onclick="updateSender()">保存する</button>
+        <button class="btn btn-secondary btn-sm" onclick="cancelSenderEdit()">キャンセル</button>
+      </div>
     </div>
     <div class="sec-title">登録済み差出人</div>
     <div id="sender-list"></div>
@@ -1415,7 +1431,7 @@ function renderSenderList(){
   if(db.senders.length===0){empty.style.display='block';return;}
   empty.style.display='none';
   db.senders.forEach(s=>{
-    const div=document.createElement('div'); div.className='sender-item';
+    const div=document.createElement('div'); div.className='sender-item'; div.dataset.sid=s.id;
     div.innerHTML=`
       <div>
         <div class="sender-name">${s.name}</div>
@@ -1443,7 +1459,19 @@ function openSenderEdit(id){
   document.getElementById('se-zip').value=s.zip||'';
   document.getElementById('se-tel').value=s.tel||'';
   document.getElementById('se-addr').value=s.addr||'';
-  openScreen('screen-sender-edit');
+  // 新規登録フォームを隠してインライン編集フォームを表示
+  document.getElementById('sm-add-form').style.display='none';
+  document.getElementById('sm-edit-form').style.display='block';
+  // 編集中の行をハイライト
+  document.querySelectorAll('.sender-item').forEach(el=>{
+    el.style.opacity=el.dataset.sid===id?'1':'0.4';
+  });
+  document.getElementById('sm-edit-form').scrollIntoView({behavior:'smooth'});
+}
+function cancelSenderEdit(){
+  document.getElementById('sm-add-form').style.display='block';
+  document.getElementById('sm-edit-form').style.display='none';
+  document.querySelectorAll('.sender-item').forEach(el=>el.style.opacity='1');
 }
 function updateSender(){
   const id=document.getElementById('se-id').value;
@@ -1455,7 +1483,10 @@ function updateSender(){
     tel:document.getElementById('se-tel').value.trim(),
     addr:document.getElementById('se-addr').value.trim()
   };
-  saveDB(); closeScreen('screen-sender-edit'); renderSenderList(); updateSettingsCounts();
+  saveDB();
+  cancelSenderEdit();
+  renderSenderList();
+  updateSettingsCounts();
 }
 
 // ===== 自由タグ管理 =====
