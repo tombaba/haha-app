@@ -115,7 +115,7 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 /* PDFリンク */
 .pdf-links-wrap{background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:13px;}
 .pdf-links-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;}
-.pdf-link-row{display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;}
+.pdf-link-row{display:grid;grid-template-columns:1fr 1fr auto auto;gap:6px;margin-bottom:6px;align-items:center;}
 .pdf-link-row input{padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;width:100%;outline:none;}
 .pdf-link-row input:focus{border-color:var(--accent);}
 .btn-del-row{background:var(--danger);border:none;color:#fff;border-radius:8px;padding:9px 10px;cursor:pointer;font-size:13px;}
@@ -247,7 +247,7 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <div id="pin-screen">
   <div class="pin-logo">📬</div>
   <div class="pin-title">母の管理アプリ</div>
-  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v1.8</div>
+  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v2.2</div>
   <p id="pin-prompt">PINコードを入力してください</p>
   <div class="pin-dots">
     <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
@@ -553,7 +553,13 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
           </div>
           <div class="taiou-ts" id="ts-pdf"></div>
           <div class="taiou-sub" id="sub-pdf" style="display:none;">
-            <input type="text" placeholder="Google Drive URL" id="taiou-pdf-url">
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="url" placeholder="Google Drive URL" id="taiou-pdf-url" style="flex:1;" oninput="updatePdfLink()">
+              <a id="taiou-pdf-link-btn" href="#" target="_blank" rel="noopener"
+                style="display:none;background:var(--accent2);color:#fff;border-radius:8px;padding:9px 12px;font-size:13px;white-space:nowrap;text-decoration:none;">
+                📎 開く
+              </a>
+            </div>
           </div>
         </div>
         <div class="taiou-item" id="taiou-filing">
@@ -631,29 +637,6 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
     <div id="location-master-list"></div>
     <div class="empty-state" id="location-master-empty" style="display:none;">
       <div class="empty-icon">📦</div><div class="empty-msg">保管場所が登録されていません</div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 差出人編集 ===== -->
-<div class="sub-screen" id="screen-sender-edit">
-  <div class="sub-header">
-    <button class="sub-back" onclick="closeScreen('screen-sender-edit')">←</button>
-    <div class="sub-title">差出人を編集</div>
-  </div>
-  <div class="sub-content">
-    <div class="section-block">
-      <input type="hidden" id="se-id">
-      <div class="fg"><label class="fl">差出人名 *</label><input type="text" class="fi" id="se-name"></div>
-      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;">
-        <div class="fg"><label class="fl">郵便番号</label><input type="text" class="fi" id="se-zip"></div>
-        <div class="fg"><label class="fl">電話番号</label><input type="tel" class="fi" id="se-tel"></div>
-      </div>
-      <div class="fg"><label class="fl">住所</label><input type="text" class="fi" id="se-addr"></div>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="updateSender()">保存する</button>
-        <button class="btn btn-secondary" onclick="closeScreen('screen-sender-edit')">キャンセル</button>
-      </div>
     </div>
   </div>
 </div>
@@ -1071,6 +1054,14 @@ function renderMailList(){
       ?`<span class="status-chip" style="background:#fdecea;color:#b83232;">⚠️ 到着遅延</span>`
       :'';
 
+    // PDFリンク（pdfLinks + taiou.pdf.url）をまとめて収集
+    const allPdfLinks=[];
+    if(m.pdfLinks&&m.pdfLinks.length>0) m.pdfLinks.forEach(l=>{ if(l.url) allPdfLinks.push(l); });
+    if(m.taiou?.pdf?.url) allPdfLinks.push({name:'PDFファイル',url:m.taiou.pdf.url});
+    const pdfIconHtml=allPdfLinks.length>0
+      ?allPdfLinks.map(l=>`<a href="${l.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:3px;background:var(--accent-light);color:var(--accent2);border-radius:20px;padding:3px 9px;font-size:11px;text-decoration:none;font-weight:600;">📎 ${l.name||'PDF'}</a>`).join('')
+      :'';
+
     div.innerHTML=`
       <div class="mail-card-inner">
         <div class="mail-card-top">
@@ -1083,6 +1074,7 @@ function renderMailList(){
           ${kanshiBadge}
           ${chips}
         </div>
+        ${pdfIconHtml?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">${pdfIconHtml}</div>`:''}
         ${m.amount?`<div style="font-size:14px;font-weight:700;color:var(--accent2);margin-top:5px;">¥${Number(m.amount).toLocaleString()}</div>`:''}
       </div>
     `;
@@ -1103,6 +1095,18 @@ function addPdfLinkRow(wrapId, name='', url=''){
     <input type="url" placeholder="https://drive.google.com/..." value="${url}">
     <button class="btn-del-row" onclick="document.getElementById('${id}').remove()">✕</button>
   `;
+  // URLが入力されたらリンクボタンを表示
+  const urlInput=div.querySelectorAll('input')[1];
+  const linkBtn=document.createElement('a');
+  linkBtn.textContent='📎'; linkBtn.target='_blank'; linkBtn.rel='noopener';
+  linkBtn.style.cssText='display:'+(url?'flex':'none')+';align-items:center;justify-content:center;background:var(--accent-light);color:var(--accent2);border-radius:8px;padding:9px 10px;font-size:14px;text-decoration:none;flex-shrink:0;';
+  if(url) linkBtn.href=url;
+  urlInput.addEventListener('input',()=>{
+    const v=urlInput.value.trim();
+    linkBtn.href=v||'#';
+    linkBtn.style.display=v?'flex':'none';
+  });
+  div.appendChild(linkBtn);
   wrap.appendChild(div);
 }
 function getPdfLinks(wrapId){
@@ -1166,7 +1170,12 @@ function getPhotos(wrapId){
   return [...document.getElementById(wrapId).querySelectorAll('.img-slot')].map(s=>s.dataset.img||'');
 }
 
-// ===== 対応状況 =====
+function updatePdfLink(){
+  const url=document.getElementById('taiou-pdf-url').value.trim();
+  const btn=document.getElementById('taiou-pdf-link-btn');
+  if(url){ btn.href=url; btn.style.display='inline-flex'; }
+  else btn.style.display='none';
+}
 let taiouState={};
 function initTaiou(data){
   taiouState=data||{};
@@ -1179,7 +1188,10 @@ function initTaiou(data){
     chk.classList.toggle('checked',!!d.done);
     ts.textContent=d.done&&d.ts?d.ts:'';
     if(sub){ sub.style.display=d.done?'block':'none'; }
-    if(k==='pdf'&&d.url) document.getElementById('taiou-pdf-url').value=d.url||'';
+    if(k==='pdf'&&d.url){
+      document.getElementById('taiou-pdf-url').value=d.url||'';
+      updatePdfLink();
+    }
     if(k==='filing'){
       if(d.name){
         const sel=document.getElementById('taiou-filing-name');
@@ -1351,16 +1363,21 @@ function saveMail(){
   const senderId=document.getElementById('me-sender-select').value;
   const senderName=document.getElementById('me-sender-name').value.trim();
 
-  // 差出人をマスタ保存
+  // 差出人をマスタ保存（未登録かつチェックONの場合のみ・重複チェック付き）
   if(!senderId && senderName && document.getElementById('me-save-sender').checked){
-    const newSender={
-      id: Date.now().toString(),
-      name: senderName,
-      zip: document.getElementById('me-sender-zip').value.trim(),
-      tel: document.getElementById('me-sender-tel').value.trim(),
-      addr: document.getElementById('me-sender-addr').value.trim()
-    };
-    db.senders.push(newSender);
+    const alreadyExists=db.senders.some(s=>s.name===senderName);
+    if(!alreadyExists){
+      const newSender={
+        id: Date.now().toString(),
+        name: senderName,
+        zip: document.getElementById('me-sender-zip').value.trim(),
+        tel: document.getElementById('me-sender-tel').value.trim(),
+        addr: document.getElementById('me-sender-addr').value.trim()
+      };
+      db.senders.push(newSender);
+    }
+    // 保存後はチェックをリセット
+    document.getElementById('me-save-sender').checked=false;
   }
 
   const taiouData=getTaiouData();
@@ -1391,6 +1408,7 @@ function saveMail(){
   renderMailList();
   buildFilterUI();
   checkAlerts();
+  updateSettingsCounts();
 }
 
 function deleteMail(){
@@ -1432,36 +1450,30 @@ function renderSenderList(){
   empty.style.display='none';
   db.senders.forEach(s=>{
     const div=document.createElement('div'); div.className='sender-item'; div.dataset.sid=s.id;
-    div.innerHTML=`
-      <div>
-        <div class="sender-name">${s.name}</div>
-        <div class="sender-sub">${[s.zip,s.addr,s.tel].filter(Boolean).join(' ・ ')}</div>
-      </div>
-      <div style="display:flex;gap:6px;">
-        <button class="btn btn-secondary btn-sm" id="edit-sender-${s.id}">編集</button>
-        <button class="btn btn-danger btn-sm" id="del-sender-${s.id}">削除</button>
-      </div>
-    `;
-    div.querySelector(`#edit-sender-${s.id}`).addEventListener('click', e=>{
-      e.stopPropagation(); openSenderEdit(s.id);
-    });
-    div.querySelector(`#del-sender-${s.id}`).addEventListener('click', e=>{
-      e.stopPropagation(); deleteSender(s.id);
-    });
+    const info=document.createElement('div');
+    info.innerHTML=`<div class="sender-name">${s.name}</div><div class="sender-sub">${[s.zip,s.addr,s.tel].filter(Boolean).join(' ・ ')}</div>`;
+    const btnWrap=document.createElement('div'); btnWrap.style.cssText='display:flex;gap:6px;flex-shrink:0;';
+    const editBtn=document.createElement('button'); editBtn.className='btn btn-secondary btn-sm'; editBtn.textContent='編集';
+    editBtn.addEventListener('click', e=>{ e.stopPropagation(); openSenderEdit(s.id); });
+    const delBtn=document.createElement('button'); delBtn.className='btn btn-danger btn-sm'; delBtn.textContent='削除';
+    delBtn.addEventListener('click', e=>{ e.stopPropagation(); deleteSender(s.id); });
+    btnWrap.appendChild(editBtn); btnWrap.appendChild(delBtn);
+    div.appendChild(info); div.appendChild(btnWrap);
     list.appendChild(div);
   });
 }
 
 function openSenderEdit(id){
   const s=db.senders.find(x=>x.id===id); if(!s) return;
+  // 先にフォームを表示してからセット（display:noneだとvalueが効かない場合があるため）
+  document.getElementById('sm-add-form').style.display='none';
+  document.getElementById('sm-edit-form').style.display='block';
+  // 値をセット
   document.getElementById('se-id').value=id;
   document.getElementById('se-name').value=s.name||'';
   document.getElementById('se-zip').value=s.zip||'';
   document.getElementById('se-tel').value=s.tel||'';
   document.getElementById('se-addr').value=s.addr||'';
-  // 新規登録フォームを隠してインライン編集フォームを表示
-  document.getElementById('sm-add-form').style.display='none';
-  document.getElementById('sm-edit-form').style.display='block';
   // 編集中の行をハイライト
   document.querySelectorAll('.sender-item').forEach(el=>{
     el.style.opacity=el.dataset.sid===id?'1':'0.4';
