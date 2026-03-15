@@ -218,6 +218,20 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 
 /* 差出人マスタ */
 .sender-item{background:var(--bg2);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;}
+
+/* ライトボックス */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9000;display:none;align-items:center;justify-content:center;padding:1rem;}
+.lightbox.active{display:flex;}
+.lightbox img{max-width:100%;max-height:90vh;border-radius:8px;object-fit:contain;}
+.lightbox-close{position:absolute;top:1rem;right:1rem;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:24px;width:40px;height:40px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+
+/* 写真スロット操作ボタン */
+.img-slot-actions{position:absolute;bottom:0;left:0;right:0;display:flex;gap:2px;background:rgba(0,0,0,.55);padding:3px;opacity:0;transition:opacity .15s;}
+.img-slot:active .img-slot-actions{opacity:1;}
+.img-slot-ab{flex:1;border:none;color:#fff;font-size:10px;padding:4px 2px;cursor:pointer;border-radius:3px;font-family:inherit;}
+.img-ab-camera{background:rgba(79,142,247,.85);}
+.img-ab-album{background:rgba(60,60,60,.85);}
+.img-ab-del{background:rgba(184,50,50,.85);}
 .sender-name{font-size:15px;font-weight:500;}
 .sender-sub{font-size:12px;color:var(--text3);margin-top:2px;}
 
@@ -404,6 +418,12 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
     </div>
 
   </div>
+</div>
+
+<!-- ライトボックス -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="">
 </div>
 
 <!-- FAB -->
@@ -1072,51 +1092,49 @@ function buildPhotoSlots(wrapId, photos=[]){
   for(let i=0;i<4;i++){
     const slot=document.createElement('div');
     slot.className='img-slot'; slot.id=`${wrapId}-slot-${i}`;
-    const fileInput=document.createElement('input');
-    fileInput.type='file'; fileInput.accept='image/*'; fileInput.style.display='none';
-    fileInput.onchange=async e=>{
-      const file=e.target.files[0]; if(!file) return;
-      const compressed=await compressImage(file);
-      slot.innerHTML='';
-      const img=document.createElement('img'); img.src=compressed;
-      const delBtn=document.createElement('button'); delBtn.className='img-del'; delBtn.textContent='✕';
-      delBtn.onclick=e=>{ e.stopPropagation(); buildPhotoSlots(wrapId, getPhotos(wrapId).map((p,j)=>j===i?null:p).filter(x=>x!==undefined)); };
-      slot.appendChild(img); slot.appendChild(delBtn);
-      slot.dataset.img=compressed;
-      slot.onclick=null;
-    };
-    slot.appendChild(fileInput);
-    if(photos[i]){
-      const img=document.createElement('img'); img.src=photos[i];
-      const delBtn=document.createElement('button'); delBtn.className='img-del'; delBtn.textContent='✕';
-      delBtn.onclick=e=>{ e.stopPropagation(); slot.innerHTML=''; buildPhotoSlot(slot,i,wrapId,labels); slot.dataset.img=''; };
-      slot.appendChild(img); slot.appendChild(delBtn);
-      slot.dataset.img=photos[i];
-    } else {
-      buildPhotoSlot(slot,i,wrapId,labels);
-    }
+    slot.style.position='relative';
+    if(photos[i]) renderPhotoInSlot(slot,photos[i],i,wrapId,labels);
+    else renderEmptySlot(slot,i,wrapId,labels);
     wrap.appendChild(slot);
   }
 }
-function buildPhotoSlot(slot,i,wrapId,labels){
-  slot.innerHTML=`<div class="img-icon">📷</div><div class="img-label">${labels[i]}</div>`;
-  slot.dataset.img='';
-  slot.onclick=()=>slot.querySelector('input[type=file]')?.click()||slot.nextSibling?.click();
-  // fileInputを再追加
-  const fi=document.createElement('input'); fi.type='file'; fi.accept='image/*'; fi.style.display='none';
-  fi.onchange=async e=>{
-    const file=e.target.files[0]; if(!file) return;
-    const compressed=await compressImage(file);
-    slot.innerHTML='';
-    const img=document.createElement('img'); img.src=compressed;
-    const delBtn=document.createElement('button'); delBtn.className='img-del'; delBtn.textContent='✕';
-    delBtn.onclick=ev=>{ ev.stopPropagation(); buildPhotoSlot(slot,i,wrapId,labels); };
-    slot.appendChild(img); slot.appendChild(delBtn);
-    slot.dataset.img=compressed; slot.onclick=null;
-  };
-  slot.appendChild(fi);
-  slot.onclick=()=>fi.click();
+function renderEmptySlot(slot,i,wrapId,labels){
+  slot.innerHTML=''; slot.dataset.img=''; slot.onclick=null;
+  const fiCamera=document.createElement('input');
+  fiCamera.type='file'; fiCamera.accept='image/*'; fiCamera.capture='environment'; fiCamera.style.display='none';
+  fiCamera.onchange=async e=>{ const f=e.target.files[0]; if(!f) return; renderPhotoInSlot(slot,await compressImage(f),i,wrapId,labels); };
+  const fiAlbum=document.createElement('input');
+  fiAlbum.type='file'; fiAlbum.accept='image/*'; fiAlbum.style.display='none';
+  fiAlbum.onchange=async e=>{ const f=e.target.files[0]; if(!f) return; renderPhotoInSlot(slot,await compressImage(f),i,wrapId,labels); };
+  const icon=document.createElement('div'); icon.className='img-icon'; icon.textContent='📷';
+  const lbl=document.createElement('div'); lbl.className='img-label'; lbl.textContent=labels[i];
+  const bw=document.createElement('div'); bw.style.cssText='display:flex;gap:3px;margin-top:5px;width:100%;';
+  const bC=document.createElement('button'); bC.className='img-slot-ab img-ab-camera'; bC.textContent='カメラ'; bC.style.cssText='flex:1;font-size:10px;padding:4px;border:none;color:#fff;background:rgba(79,142,247,.85);border-radius:4px;cursor:pointer;';
+  bC.onclick=e=>{ e.stopPropagation(); fiCamera.click(); };
+  const bA=document.createElement('button'); bA.className='img-slot-ab img-ab-album'; bA.textContent='アルバム'; bA.style.cssText='flex:1;font-size:10px;padding:4px;border:none;color:#fff;background:rgba(80,80,80,.85);border-radius:4px;cursor:pointer;';
+  bA.onclick=e=>{ e.stopPropagation(); fiAlbum.click(); };
+  bw.appendChild(bC); bw.appendChild(bA);
+  slot.appendChild(fiCamera); slot.appendChild(fiAlbum);
+  slot.appendChild(icon); slot.appendChild(lbl); slot.appendChild(bw);
 }
+function renderPhotoInSlot(slot,src,i,wrapId,labels){
+  slot.innerHTML=''; slot.dataset.img=src; slot.onclick=null;
+  const img=document.createElement('img'); img.src=src; img.style.cssText='width:100%;height:100%;object-fit:cover;cursor:zoom-in;';
+  img.onclick=e=>{ e.stopPropagation(); openLightbox(src); };
+  const delBtn=document.createElement('button'); delBtn.className='img-del'; delBtn.textContent='✕';
+  delBtn.style.display='flex';
+  delBtn.onclick=e=>{ e.stopPropagation(); renderEmptySlot(slot,i,wrapId,labels); };
+  slot.appendChild(img); slot.appendChild(delBtn);
+}
+function openLightbox(src){
+  document.getElementById('lightbox-img').src=src;
+  document.getElementById('lightbox').classList.add('active');
+}
+function closeLightbox(){
+  document.getElementById('lightbox').classList.remove('active');
+  document.getElementById('lightbox-img').src='';
+}
+function buildPhotoSlot(slot,i,wrapId,labels){ renderEmptySlot(slot,i,wrapId,labels); }
 function getPhotos(wrapId){
   return [...document.getElementById(wrapId).querySelectorAll('.img-slot')].map(s=>s.dataset.img||'');
 }
@@ -1236,6 +1254,13 @@ function onSenderSelect(){
 function toggleKanshi(){
   const checked=document.getElementById('me-kanshi').checked;
   document.getElementById('me-kanshi-detail').style.display=checked?'block':'none';
+  // 到着監視ONにしたら受取日をクリア、OFFにしたら今日の日付をセット
+  const dateEl=document.getElementById('me-date');
+  if(checked && !dateEl.value){
+    dateEl.value='';
+  } else if(!checked && !dateEl.value){
+    dateEl.value=new Date().toISOString().slice(0,10);
+  }
 }
 
 // ===== 郵便物 編集画面 =====
@@ -1245,10 +1270,22 @@ function openMailEdit(id){
   document.getElementById('me-id').value=id||'';
   document.getElementById('me-title').value=mail?.title||'';
   document.getElementById('me-title-err').style.display='none';
-  document.getElementById('me-date').value=mail?.date||new Date().toISOString().slice(0,10);
   document.getElementById('me-amount').value=mail?.amount||'';
   document.getElementById('me-memo').value=mail?.memo||'';
   document.getElementById('me-del-btn').style.display=id?'inline-block':'none';
+
+  // 到着監視（受取日より先に設定）
+  const kanshi=!!(mail?.kanshi);
+  document.getElementById('me-kanshi').checked=kanshi;
+  document.getElementById('me-kanshi-detail').style.display=kanshi?'block':'none';
+  document.getElementById('me-kanshi-date').value=mail?.kanshiDate||'';
+
+  // 受取日：到着監視ONの新規登録は空欄、それ以外は今日の日付をデフォルト
+  if(mail){
+    document.getElementById('me-date').value=mail.date||'';
+  } else {
+    document.getElementById('me-date').value=kanshi?'':new Date().toISOString().slice(0,10);
+  }
 
   // 差出人
   buildSenderSelect();
@@ -1267,11 +1304,7 @@ function openMailEdit(id){
   // タグ
   buildTagsUI('me-tags-wrap', mail?.tags||[]);
 
-  // 到着監視
-  const kanshi=!!(mail?.kanshi);
-  document.getElementById('me-kanshi').checked=kanshi;
-  document.getElementById('me-kanshi-detail').style.display=kanshi?'block':'none';
-  document.getElementById('me-kanshi-date').value=mail?.kanshiDate||'';
+  // 到着監視はopenMailEditで設定済みのためここでは削除
 
   // PDF リンク
   document.getElementById('me-pdf-links').innerHTML='';
@@ -1389,10 +1422,16 @@ function renderSenderList(){
         <div class="sender-sub">${[s.zip,s.addr,s.tel].filter(Boolean).join(' ・ ')}</div>
       </div>
       <div style="display:flex;gap:6px;">
-        <button class="btn btn-secondary btn-sm" onclick="openSenderEdit('${s.id}')">編集</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteSender('${s.id}')">削除</button>
+        <button class="btn btn-secondary btn-sm" id="edit-sender-${s.id}">編集</button>
+        <button class="btn btn-danger btn-sm" id="del-sender-${s.id}">削除</button>
       </div>
     `;
+    div.querySelector(`#edit-sender-${s.id}`).addEventListener('click', e=>{
+      e.stopPropagation(); openSenderEdit(s.id);
+    });
+    div.querySelector(`#del-sender-${s.id}`).addEventListener('click', e=>{
+      e.stopPropagation(); deleteSender(s.id);
+    });
     list.appendChild(div);
   });
 }
