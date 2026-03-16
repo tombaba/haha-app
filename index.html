@@ -345,7 +345,7 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <div id="pin-screen" style="display:none;">
   <div class="pin-logo">📬</div>
   <div class="pin-title">馬場みね子　情報管理アプリ</div>
-  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v4.8</div>
+  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v4.9</div>
   <p id="pin-prompt">PINコードを入力してください</p>
   <div class="pin-dots">
     <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
@@ -3609,17 +3609,20 @@ async function submitPasswordReset(){
 
 function showAppAfterLogin(){
   document.getElementById('login-screen').style.display='none';
-  // PIN設定済みならPIN画面へ、未設定ならそのままアプリへ
+  // PIN関連の状態をリセット
+  pinBuf=''; pinStep=1; pinFirst='';
+  updDots();
+  document.getElementById('pin-error').textContent='';
   if(db.pin){
     pinMode='verify';
     document.getElementById('pin-prompt').textContent='PINコードを入力してください';
-    document.getElementById('pin-screen').style.display='flex';
+    document.getElementById('pin-hint').textContent='';
   } else {
     pinMode='setup';
     document.getElementById('pin-prompt').textContent='PINコードを設定してください（4桁）';
     document.getElementById('pin-hint').textContent='初回起動時です。任意の4桁を設定してください';
-    document.getElementById('pin-screen').style.display='flex';
   }
+  document.getElementById('pin-screen').style.display='flex';
 }
 
 function unlock(){
