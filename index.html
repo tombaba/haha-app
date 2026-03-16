@@ -345,7 +345,7 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <div id="pin-screen" style="display:none;">
   <div class="pin-logo">📬</div>
   <div class="pin-title">馬場みね子　情報管理アプリ</div>
-  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v4.7</div>
+  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v4.8</div>
   <p id="pin-prompt">PINコードを入力してください</p>
   <div class="pin-dots">
     <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
@@ -3567,7 +3567,13 @@ async function submitLogin(){
   try{
     let result;
     if(loginMode==='signup'){
-      result=await supabaseClient.auth.signUp({email,password});
+      result=await supabaseClient.auth.signUp({
+        email,
+        password,
+        options:{
+          emailRedirectTo:'https://tombaba.github.io/haha-app/'
+        }
+      });
       if(result.error) throw result.error;
       if(result.data.user&&!result.data.session){
         errEl.style.color='#aaffaa';
