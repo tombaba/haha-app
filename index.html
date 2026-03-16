@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>馬場みね子　情報管理アプリ</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 :root {
   --bg:#f2f1ed;--bg2:#ffffff;--bg3:#eae9e4;--bg4:#f8f7f3;
@@ -345,7 +345,7 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <div id="pin-screen" style="display:none;">
   <div class="pin-logo">📬</div>
   <div class="pin-title">馬場みね子　情報管理アプリ</div>
-  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v4.5</div>
+  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v4.6</div>
   <p id="pin-prompt">PINコードを入力してください</p>
   <div class="pin-dots">
     <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
@@ -1383,7 +1383,8 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 // ===== Supabase設定 =====
 const SUPABASE_URL = 'https://ndbwijlautdtthljkuzf.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Lf28B6u9gswaVX-Eg7htsA_57N6-_Z2';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const { createClient } = supabase;
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 
 // ===== データ管理 =====
@@ -3566,7 +3567,7 @@ async function submitLogin(){
   try{
     let result;
     if(loginMode==='signup'){
-      result=await supabase.auth.signUp({email,password});
+      result=await supabaseClient.auth.signUp({email,password});
       if(result.error) throw result.error;
       if(result.data.user&&!result.data.session){
         errEl.style.color='#aaffaa';
@@ -3575,7 +3576,7 @@ async function submitLogin(){
         return;
       }
     } else {
-      result=await supabase.auth.signInWithPassword({email,password});
+      result=await supabaseClient.auth.signInWithPassword({email,password});
       if(result.error) throw result.error;
     }
     currentUser=result.data.user;
@@ -3595,7 +3596,7 @@ async function submitPasswordReset(){
   const email=document.getElementById('login-email').value.trim();
   const errEl=document.getElementById('login-error');
   if(!email){errEl.textContent='メールアドレスを入力してください';return;}
-  const {error}=await supabase.auth.resetPasswordForEmail(email);
+  const {error}=await supabaseClient.auth.resetPasswordForEmail(email);
   if(error){errEl.textContent=error.message;}
   else{errEl.style.color='#aaffaa';errEl.textContent='パスワードリセットメールを送信しました。';}
 }
@@ -3636,7 +3637,7 @@ function lockApp(){
 // ===== 起動処理 =====
 async function initApp(){
   // 既存セッション確認
-  const {data:{session}}=await supabase.auth.getSession();
+  const {data:{session}}=await supabaseClient.auth.getSession();
   if(session){
     currentUser=session.user;
     await loadDB();
