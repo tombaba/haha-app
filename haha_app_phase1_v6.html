@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>母の管理アプリ</title>
+<title>馬場みね子　情報管理アプリ</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg:#f2f1ed;--bg2:#ffffff;--bg3:#eae9e4;--bg4:#f8f7f3;
@@ -20,6 +21,22 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:16px;-webkit-font-smoothing:antialiased;}
+
+/* ===== ログイン画面 ===== */
+#login-screen{position:fixed;inset:0;background:linear-gradient(160deg,var(--accent2) 0%,#1a3a5c 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10000;padding:2rem;}
+.login-logo{font-size:48px;margin-bottom:1rem;}
+.login-title{color:#fff;font-size:20px;font-weight:700;margin-bottom:.3rem;}
+.login-sub{color:rgba(255,255,255,.7);font-size:13px;margin-bottom:2rem;text-align:center;}
+.login-form{width:100%;max-width:320px;}
+.login-input{width:100%;padding:14px 16px;border:none;border-radius:12px;font-size:16px;font-family:inherit;background:rgba(255,255,255,.15);color:#fff;outline:none;margin-bottom:10px;}
+.login-input::placeholder{color:rgba(255,255,255,.5);}
+.login-input:focus{background:rgba(255,255,255,.22);}
+.login-btn{width:100%;padding:14px;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;transition:opacity .15s;}
+.login-btn:active{opacity:.8;}
+.login-btn-primary{background:#fff;color:var(--accent2);}
+.login-btn-secondary{background:rgba(255,255,255,.15);color:#fff;}
+#login-error{color:#ffaaaa;font-size:13px;margin-top:.5rem;min-height:18px;text-align:center;}
+#login-mode-toggle{color:rgba(255,255,255,.7);font-size:13px;text-align:center;margin-top:1rem;cursor:pointer;text-decoration:underline;}
 
 /* ===== PIN ===== */
 #pin-screen{position:fixed;inset:0;background:linear-gradient(160deg,var(--accent2) 0%,#1a3a5c 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;padding:2rem;}
@@ -115,7 +132,7 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 /* PDFリンク */
 .pdf-links-wrap{background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:13px;}
 .pdf-links-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;}
-.pdf-link-row{display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;}
+.pdf-link-row{display:grid;grid-template-columns:1fr 1fr auto auto;gap:6px;margin-bottom:6px;align-items:center;}
 .pdf-link-row input{padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;width:100%;outline:none;}
 .pdf-link-row input:focus{border-color:var(--accent);}
 .btn-del-row{background:var(--danger);border:none;color:#fff;border-radius:8px;padding:9px 10px;cursor:pointer;font-size:13px;}
@@ -185,9 +202,10 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 .sub-screen{position:fixed;inset:0;background:var(--bg);z-index:500;display:none;flex-direction:column;max-width:600px;margin:0 auto;}
 .sub-screen.active{display:flex;}
 .sub-header{background:var(--accent2);color:#fff;padding:.9rem 1.25rem .75rem;display:flex;align-items:center;gap:12px;flex-shrink:0;}
-.sub-back{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0;line-height:1;}
+.sub-back-btn{background:rgba(255,255,255,.18);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;padding:6px 12px;border-radius:20px;font-family:inherit;flex-shrink:0;}
 .sub-title{font-size:16px;font-weight:700;flex:1;}
-.sub-content{flex:1;overflow-y:auto;padding:1rem 1rem 5rem;}
+.sub-content{flex:1;overflow-y:auto;padding:1rem 1rem 2rem;}
+.sub-btn-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:.6rem 1rem;display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;}
 
 /* セパレーター */
 .divider{height:1px;background:var(--border);margin:14px 0;}
@@ -235,7 +253,73 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 .sender-name{font-size:15px;font-weight:500;}
 .sender-sub{font-size:12px;color:var(--text3);margin-top:2px;}
 
-/* スクロールバー */
+/* 重要書類 */
+.doc-card{background:var(--bg2);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:10px;border-left:4px solid var(--border2);cursor:pointer;overflow:hidden;transition:border-color .2s;}
+.doc-card.bl-expired{border-left-color:var(--danger);}
+.doc-card.bl-week{border-left-color:#e8a020;}
+.doc-card.bl-month{border-left-color:#f0c040;}
+.doc-card.bl-valid{border-left-color:var(--success);}
+.doc-card.bl-none{border-left-color:var(--border2);}
+.doc-card-inner{padding:13px 14px;display:flex;align-items:center;gap:10px;}
+.doc-card-icon{width:38px;height:38px;border-radius:9px;background:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
+.doc-card-body{flex:1;min-width:0;}
+.doc-card-name{font-size:15px;font-weight:700;margin-bottom:3px;}
+.doc-card-sub{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.doc-card-arrows{display:flex;flex-direction:column;gap:3px;flex-shrink:0;}
+.doc-arrow-btn{background:var(--bg3);border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
+.doc-arrow-btn:active{background:var(--border);}
+
+/* パスワード入力行 */
+.pw-row{background:var(--bg3);border-radius:10px;padding:10px;margin-bottom:8px;}
+.pw-row-head{display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;}
+.pw-row-head select,.pw-row-head input{padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;outline:none;width:100%;}
+.pw-val-wrap{display:flex;align-items:center;gap:6px;}
+.pw-val-wrap input{flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:monospace;background:#fff;outline:none;}
+.pw-eye{background:var(--bg3);border:1px solid var(--border);border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;flex-shrink:0;user-select:none;}
+
+/* 詳細画面パーツ */
+.detail-section{background:var(--bg2);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin-bottom:12px;}
+.detail-section-title{font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:10px;}
+.detail-row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--bg3);font-size:13px;gap:8px;}
+.detail-row:last-child{border-bottom:none;}
+.detail-label{color:var(--text2);flex-shrink:0;}
+.detail-val{color:var(--text);font-weight:500;text-align:right;word-break:break-all;}
+.detail-num-item{background:var(--bg3);border-radius:8px;padding:8px 12px;margin-bottom:6px;display:flex;justify-content:space-between;font-size:13px;}
+.detail-pw-item{background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:6px;font-size:13px;}
+.detail-pw-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.detail-pw-type{font-size:11px;color:var(--text3);}
+.detail-pw-name{font-weight:500;}
+.detail-pw-val{display:flex;align-items:center;gap:8px;margin-top:6px;}
+.detail-pw-masked{font-family:monospace;font-size:15px;letter-spacing:2px;color:var(--text2);}
+.detail-pw-eye{background:var(--bg2);border:1px solid var(--border);border-radius:6px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;user-select:none;}
+/* 賃借人管理 */
+.tc-card{background:var(--bg2);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:10px;cursor:pointer;overflow:hidden;border-left:4px solid var(--accent);}
+.tc-card.past{border-left-color:var(--border2);}
+.tc-card-inner{padding:13px 14px;}
+.tc-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;}
+.tc-card-title{font-size:14px;font-weight:700;flex:1;line-height:1.4;}
+.tc-card-badge{font-size:11px;padding:2px 9px;border-radius:20px;font-weight:700;white-space:nowrap;flex-shrink:0;margin-left:6px;}
+.tc-badge-current{background:var(--accent-light);color:var(--accent2);}
+.tc-badge-renewal{background:var(--success-light);color:var(--success);}
+.tc-badge-leave{background:var(--bg3);color:var(--text3);}
+.tc-card-meta{font-size:12px;color:var(--text2);}
+.tc-card-rent{font-size:14px;font-weight:700;color:var(--accent2);margin-top:4px;}
+/* 確定申告 */
+.yr-btn{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:14px;cursor:pointer;font-family:inherit;}
+.yr-label{font-size:16px;font-weight:700;color:var(--accent2);flex:1;text-align:center;}
+.mtable{width:100%;border-collapse:collapse;font-size:13px;}
+.mtable th{background:var(--bg3);padding:8px 6px;text-align:center;font-weight:600;color:var(--text2);white-space:nowrap;}
+.mtable td{padding:9px 6px;border-bottom:1px solid var(--bg3);text-align:right;white-space:nowrap;}
+.mtable td:first-child{text-align:left;color:var(--text2);}
+.mtable tr.total-row td{font-weight:700;background:var(--accent-light);color:var(--accent2);border-top:2px solid var(--accent);}
+.mtable .cell-link{cursor:pointer;color:var(--accent2);text-decoration:underline dotted;}
+.tax-status-done{background:var(--success-light);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;color:var(--success);}
+.tax-status-pending{background:var(--bg3);border-radius:10px;padding:12px;font-size:13px;color:var(--text2);}
+.tax-personal-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bg3);font-size:13px;}
+.tax-personal-row:last-child{border-bottom:none;}
+.tax-personal-label{color:var(--text2);}
+.tax-personal-val{font-weight:700;color:var(--text);}
+
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
@@ -243,10 +327,25 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 </head>
 <body>
 
+<div id="login-screen" style="display:none;">
+  <div class="login-logo">📬</div>
+  <div class="login-title">馬場みね子　情報管理アプリ</div>
+  <div class="login-sub" id="login-sub">メールアドレスでログイン</div>
+  <div class="login-form">
+    <input type="email" class="login-input" id="login-email" placeholder="メールアドレス" autocomplete="email">
+    <input type="password" class="login-input" id="login-password" placeholder="パスワード" autocomplete="current-password">
+    <div id="login-error"></div>
+    <button class="login-btn login-btn-primary" id="login-submit-btn" onclick="submitLogin()">ログイン</button>
+    <button class="login-btn login-btn-secondary" id="login-reset-btn" onclick="submitPasswordReset()" style="display:none;">パスワードリセットメールを送る</button>
+    <div id="login-mode-toggle" onclick="toggleLoginMode()">アカウントを新規作成</div>
+  </div>
+</div>
+
 <!-- ===== PIN ===== -->
-<div id="pin-screen">
+<div id="pin-screen" style="display:none;">
   <div class="pin-logo">📬</div>
-  <div class="pin-title">母の管理アプリ</div>
+  <div class="pin-title">馬場みね子　情報管理アプリ</div>
+  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v4.5</div>
   <p id="pin-prompt">PINコードを入力してください</p>
   <div class="pin-dots">
     <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
@@ -275,16 +374,27 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
   <div class="app-header">
     <div class="header-left">
       <span>📬</span>
-      <span class="header-title">母の管理アプリ</span>
-      <span class="header-badge" id="header-badge"></span>
+      <span class="header-title">馬場みね子　情報管理アプリ</span>
+      <span class="header-badge" id="header-badge" onclick="showAlertDetail()" style="cursor:pointer;"></span>
     </div>
     <button class="lock-btn" onclick="lockApp()">🔒 ロック</button>
+  </div>
+
+  <!-- アラート詳細ポップアップ -->
+  <div id="alert-popup" style="display:none;position:fixed;top:60px;left:0;right:0;z-index:800;padding:0 1rem;">
+    <div style="background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-lg);padding:1rem;border:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-size:14px;font-weight:700;color:var(--danger);">⚠️ アラート一覧</div>
+        <button onclick="document.getElementById('alert-popup').style.display='none'" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3);">✕</button>
+      </div>
+      <div id="alert-popup-content" style="font-size:13px;color:var(--text);line-height:1.9;"></div>
+    </div>
   </div>
   <div class="tab-bar">
     <button class="tab-btn active" id="tab-mail" onclick="showTab('mail')">📮 郵便記録</button>
     <button class="tab-btn" id="tab-docs" onclick="showTab('docs')">📄 重要書類</button>
-    <button class="tab-btn" id="tab-tenant" onclick="showTab('tenant')">🏠 賃借人</button>
-    <button class="tab-btn" id="tab-tax" onclick="showTab('tax')">🧾 白色申告</button>
+    <button class="tab-btn" id="tab-tenant" onclick="showTab('tenant')">🏠 賃貸契約</button>
+    <button class="tab-btn" id="tab-tax" onclick="showTab('tax')">🧾 確定申告</button>
     <button class="tab-btn" id="tab-settings" onclick="showTab('settings')">⚙️ 設定</button>
   </div>
   <div class="content">
@@ -305,6 +415,10 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
           </button>
         </div>
         <div class="filter-panel" id="filter-panel">
+          <div class="filter-label">到着監視</div>
+          <div style="display:flex;gap:6px;margin-bottom:4px;">
+            <button class="filter-tag" id="filter-kanshi-btn" onclick="toggleKanshiFilter()">👁️ 到着監視中のみ</button>
+          </div>
           <div class="filter-label">タグ</div>
           <div class="filter-tags" id="filter-tags"></div>
           <div class="filter-label">差出人</div>
@@ -325,31 +439,81 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
       </div>
     </div>
 
-    <!-- ===== 重要書類ページ（準備中） ===== -->
+    <!-- ===== 重要書類ページ ===== -->
     <div id="page-docs" class="page">
-      <div class="empty-state">
+      <div id="docs-alert-banner"></div>
+      <div id="docs-list"></div>
+      <div class="empty-state" id="docs-empty" style="display:none;">
         <div class="empty-icon">📄</div>
-        <div class="empty-msg">重要書類タブは<br>フェーズ2で追加予定です</div>
+        <div class="empty-msg">＋ボタンで書類を追加してください</div>
       </div>
     </div>
 
-    <!-- ===== 賃借人ページ（準備中） ===== -->
+    <!-- ===== 賃借人ページ ===== -->
     <div id="page-tenant" class="page">
-      <div class="empty-state">
-        <div class="empty-icon">🏠</div>
-        <div class="empty-msg">賃借人管理タブは<br>フェーズ4で追加予定です</div>
+      <div id="tenant-alert-banner"></div>
+      <button class="btn btn-secondary" style="width:100%;margin-bottom:12px;padding:12px;font-size:14px;" onclick="openTenantHouse()">🏠 貸家情報</button>
+      <div id="tenant-current-section">
+        <div class="sec-title">現在の契約</div>
+        <div id="tenant-current-list"></div>
+        <div class="empty-state" id="tenant-current-empty" style="display:none;">
+          <div class="empty-icon">🏠</div>
+          <div class="empty-msg">現在の契約はありません</div>
+        </div>
+      </div>
+      <div id="tenant-past-section" style="margin-top:1rem;">
+        <div class="sec-title">過去の契約</div>
+        <div id="tenant-past-list"></div>
+        <div class="empty-state" id="tenant-past-empty" style="display:none;">
+          <div class="empty-icon">📋</div>
+          <div class="empty-msg">過去の契約はありません</div>
+        </div>
       </div>
     </div>
 
-    <!-- ===== 白色申告ページ（準備中） ===== -->
+    <!-- ===== 確定申告ページ ===== -->
     <div id="page-tax" class="page">
-      <div class="empty-state">
-        <div class="empty-icon">🧾</div>
-        <div class="empty-msg">白色申告タブは<br>フェーズ3で追加予定です</div>
-      </div>
-    </div>
+      <div id="tax-alert-banner"></div>
 
-    <!-- ===== 設定ページ ===== -->
+      <!-- 外部リンク -->
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <a href="https://www.keisan.nta.go.jp/" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--accent2);color:#fff;border-radius:10px;padding:10px;font-size:12px;font-weight:700;text-decoration:none;min-width:100px;">🖥️ 確定申告作成</a>
+        <a href="https://www.nta.go.jp/about/organization/tokyo/location/tokyo/setagaya/index.htm" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--accent);color:#fff;border-radius:10px;padding:10px;font-size:12px;font-weight:700;text-decoration:none;min-width:100px;">🏛️ 世田谷税務署</a>
+        <a href="https://myna.go.jp/" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--success);color:#fff;border-radius:10px;padding:10px;font-size:12px;font-weight:700;text-decoration:none;min-width:100px;">🪪 マイナポータル</a>
+      </div>
+
+      <!-- 年度切り替え -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        <button class="yr-btn" onclick="changeTaxYear(-1)">◀</button>
+        <div class="yr-label" id="tax-yr-label"></div>
+        <button class="yr-btn" onclick="changeTaxYear(1)">▶</button>
+      </div>
+
+      <!-- マイナンバー・年金番号 -->
+      <div class="section-block" id="tax-header-info"></div>
+
+      <!-- 確定申告ステータス -->
+      <div class="section-block">
+        <div class="section-block-title">📋 申告ステータス</div>
+        <div id="tax-status-display"></div>
+      </div>
+
+      <!-- 不動産収支表 -->
+      <div class="section-block">
+        <div class="section-block-title">🏠 不動産収支</div>
+        <div id="tax-income-summary" style="margin-bottom:10px;"></div>
+        <div style="overflow-x:auto;">
+          <table class="mtable" id="tax-table"></table>
+        </div>
+      </div>
+
+      <!-- 個人収支 -->
+      <div class="section-block">
+        <div class="section-block-title">👤 個人収支</div>
+        <div id="tax-personal"></div>
+      </div>
+
+    </div>
     <div id="page-settings" class="page">
       <div class="sec-title">アカウント</div>
       <div class="setting-item" onclick="openPinChange()">
@@ -428,12 +592,347 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 
 <!-- FAB -->
 <button class="fab" id="fab" onclick="openMailEdit(null)">＋</button>
+<button class="fab" id="fab-docs" onclick="openDocEdit(null)">＋</button>
+<button class="fab" id="fab-tenant" onclick="openTenantEdit(null)">＋</button>
+
+<!-- ===== 貸家情報画面 ===== -->
+<div class="sub-screen" id="screen-tenant-house">
+  <div class="sub-header">
+    <button class="sub-back-btn" onclick="closeScreen('screen-tenant-house')">戻る</button>
+    <div class="sub-title">🏠 貸家情報</div>
+  </div>
+  <div class="sub-btn-bar">
+    <button class="btn btn-primary btn-sm" onclick="saveTenantHouse()">保存する</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-tenant-house')">閉じる</button>
+  </div>
+  <div class="sub-content">
+    <div class="section-block">
+      <div class="section-block-title">📍 基本情報</div>
+      <div class="fg"><label class="fl">住所</label><input type="text" class="fi" id="th-addr" placeholder="例：東京都世田谷区…"></div>
+      <div class="fg"><label class="fl">面積</label><input type="text" class="fi" id="th-area" placeholder="例：65㎡"></div>
+      <div class="fg"><label class="fl">主な設備</label><textarea class="fi" id="th-facilities" placeholder="例：エアコン・ガスコンロ・追い焚き…"></textarea></div>
+      <div class="fg"><label class="fl">駐車場</label><input type="text" class="fi" id="th-parking" placeholder="例：有（月額5,000円）"></div>
+      <div class="fg"><label class="fl">コメント</label><textarea class="fi" id="th-comment" placeholder="その他特記事項"></textarea></div>
+    </div>
+    <div class="section-block">
+      <div class="section-block-title">📷 写真</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <div class="fl" style="margin-bottom:6px;">間取り</div>
+          <div class="img-slot" id="th-madori-slot" style="aspect-ratio:1;position:relative;" onclick="document.getElementById('th-madori-input').click()">
+            <div class="img-icon">📷</div><div class="img-label">間取り</div>
+          </div>
+          <input type="file" id="th-madori-input" accept="image/*" style="display:none" onchange="thPhotoSelect(this,'th-madori-slot')">
+        </div>
+        <div>
+          <div class="fl" style="margin-bottom:6px;">外観</div>
+          <div class="img-slot" id="th-gaikan-slot" style="aspect-ratio:1;position:relative;" onclick="document.getElementById('th-gaikan-input').click()">
+            <div class="img-icon">📷</div><div class="img-label">外観</div>
+          </div>
+          <input type="file" id="th-gaikan-input" accept="image/*" style="display:none" onchange="thPhotoSelect(this,'th-gaikan-slot')">
+        </div>
+      </div>
+    </div>
+    <div class="section-block">
+      <div class="section-block-title">🔑 鍵情報</div>
+      <div id="th-keys"></div>
+      <button class="btn-add-row" onclick="addThKeyRow()">＋ 鍵を追加</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 賃借人契約 詳細画面 ===== -->
+<div class="sub-screen" id="screen-tenant-detail">
+  <div class="sub-header">
+    <div class="sub-title" id="tc-detail-title">賃貸契約書</div>
+  </div>
+  <div class="sub-content" id="tc-detail-content"></div>
+</div>
+
+<!-- ===== 賃借人契約 編集画面 ===== -->
+<div class="sub-screen" id="screen-tenant-edit">
+  <div class="sub-header">
+    <button class="sub-back-btn" onclick="closeScreen('screen-tenant-edit')">戻る</button>
+    <div class="sub-title" id="tc-edit-title">契約を追加</div>
+  </div>
+  <div class="sub-btn-bar">
+    <button class="btn btn-primary btn-sm" onclick="saveTenant()">保存する</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-tenant-edit')">キャンセル</button>
+    <button class="btn btn-danger btn-sm" id="tc-del-btn" onclick="deleteTenant()" style="display:none;">削除</button>
+  </div>
+  <div class="sub-content">
+    <input type="hidden" id="tc-id">
+
+    <!-- 契約情報 -->
+    <div class="section-block">
+      <div class="section-block-title">📋 契約情報</div>
+      <div class="fg">
+        <label class="fl">契約種別</label>
+        <div style="display:flex;gap:8px;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;padding:10px;border:1.5px solid var(--border);border-radius:8px;flex:1;background:var(--bg4);">
+            <input type="radio" name="tc-type" value="新規" id="tc-type-new" checked> 新規
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;padding:10px;border:1.5px solid var(--border);border-radius:8px;flex:1;background:var(--bg4);">
+            <input type="radio" name="tc-type" value="更新" id="tc-type-renewal"> 更新
+          </label>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">契約日</label><input type="date" class="fi" id="tc-date"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="fg">
+          <label class="fl">契約開始日 *</label>
+          <input type="date" class="fi" id="tc-start" oninput="calcTcPeriod()">
+          <div class="fi-error" id="tc-start-err">入力必須です</div>
+        </div>
+        <div class="fg">
+          <label class="fl">契約終了日 *</label>
+          <input type="date" class="fi" id="tc-end" oninput="calcTcPeriod()">
+          <div class="fi-error" id="tc-end-err">入力必須です</div>
+        </div>
+      </div>
+      <div id="tc-period-display" style="font-size:13px;color:var(--accent2);margin-bottom:10px;font-weight:500;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div class="fg"><label class="fl">賃料（円）</label><input type="number" inputmode="numeric" class="fi" id="tc-rent" placeholder="130000"></div>
+        <div class="fg"><label class="fl">敷金（円）</label><input type="number" inputmode="numeric" class="fi" id="tc-deposit" placeholder="260000"></div>
+        <div class="fg"><label class="fl">更新料（円）</label><input type="number" inputmode="numeric" class="fi" id="tc-renewal-fee" placeholder="130000"></div>
+      </div>
+      <div class="fg">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;padding:10px;background:var(--bg3);border-radius:8px;">
+          <input type="checkbox" id="tc-dispute-check" style="width:18px;height:18px;">
+          <span>賃貸住宅紛争防止条例に基づく説明書 受領済</span>
+        </label>
+      </div>
+      <div class="fg">
+        <label class="fl">入居申込書PDFリンク</label>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="url" class="fi" id="tc-application-url" placeholder="https://drive.google.com/..." style="flex:1;" oninput="updateTcAppLink()">
+          <a id="tc-application-link" href="#" target="_blank" rel="noopener" style="display:none;background:var(--accent-light);color:var(--accent2);border-radius:8px;padding:9px 12px;font-size:13px;white-space:nowrap;text-decoration:none;">📎 開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- 不動産会社情報 -->
+    <div class="section-block">
+      <div class="section-block-title">🏢 仲介不動産会社</div>
+      <div class="fg"><label class="fl">会社名</label><input type="text" class="fi" id="tc-company" placeholder="例：〇〇不動産"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="fg"><label class="fl">免許番号</label><input type="text" class="fi" id="tc-license" placeholder="例：東京都知事(3)第〇〇号"></div>
+        <div class="fg"><label class="fl">代表者名</label><input type="text" class="fi" id="tc-rep" placeholder="例：田中太郎"></div>
+      </div>
+      <div class="fg"><label class="fl">担当者名</label><input type="text" class="fi" id="tc-staff" placeholder="例：鈴木一郎"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="fg"><label class="fl">電話番号</label><input type="tel" class="fi" id="tc-tel" placeholder="03-0000-0000"></div>
+        <div class="fg"><label class="fl">メール</label><input type="email" class="fi" id="tc-email" placeholder="example@email.com"></div>
+      </div>
+      <div class="fg">
+        <label class="fl">契約書PDFリンク</label>
+        <div id="tc-pdf-links"></div>
+        <button class="btn-add-row" onclick="addPdfLinkRow('tc-pdf-links')">＋ リンクを追加</button>
+      </div>
+    </div>
+
+    <!-- 借家人情報 -->
+    <div class="section-block">
+      <div class="section-block-title">👤 借家人情報</div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;">
+        <div class="fg"><label class="fl">氏名 *</label><input type="text" class="fi" id="tc-tenant-name" placeholder="例：山田太郎"></div>
+        <div class="fg"><label class="fl">生年月日</label><input type="date" class="fi" id="tc-tenant-birth"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;">
+        <div class="fg"><label class="fl">勤務先会社名</label><input type="text" class="fi" id="tc-tenant-company" placeholder="例：〇〇株式会社"></div>
+        <div class="fg"><label class="fl">役職</label><input type="text" class="fi" id="tc-tenant-position" placeholder="例：部長"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="fg"><label class="fl">年収（万円）</label><input type="number" inputmode="numeric" class="fi" id="tc-tenant-income" placeholder="例：600"></div>
+        <div class="fg"><label class="fl">家賃支払い法人名</label><input type="text" class="fi" id="tc-tenant-corp" placeholder="法人払いの場合"></div>
+      </div>
+      <div class="fg"><label class="fl">家族構成</label><textarea class="fi" id="tc-tenant-family" placeholder="例：本人・配偶者・子1名"></textarea></div>
+      <div class="fg"><label class="fl">緊急連絡先</label><input type="text" class="fi" id="tc-tenant-emergency" placeholder="例：末廣花子（母）090-0000-0000"></div>
+    </div>
+
+    <!-- 連帯保証人 -->
+    <div class="section-block">
+      <div class="section-block-title">🤝 連帯保証人</div>
+      <div class="fg"><label class="fl">氏名</label><input type="text" class="fi" id="tc-guarantor-name" placeholder="例：末廣花子"></div>
+      <div class="fg"><label class="fl">住所</label><input type="text" class="fi" id="tc-guarantor-addr" placeholder="例：東京都〇〇区…"></div>
+      <div class="fg"><label class="fl">電話番号</label><input type="tel" class="fi" id="tc-guarantor-tel" placeholder="03-0000-0000"></div>
+      <div class="fg"><label class="fl">勤務先</label><input type="text" class="fi" id="tc-guarantor-company" placeholder="例：〇〇株式会社"></div>
+    </div>
+
+    <!-- 契約終了ステータス -->
+    <div class="section-block">
+      <div class="section-block-title">🔄 契約終了ステータス</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg4);">
+          <input type="radio" name="tc-status" value="" id="tc-status-none" checked> 未選択（継続中）
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg4);">
+          <input type="radio" name="tc-status" value="更新" id="tc-status-renewal" onchange="toggleTcStatus()"> 更新
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg4);">
+          <input type="radio" name="tc-status" value="退去" id="tc-status-leave" onchange="toggleTcStatus()"> 退去
+        </label>
+      </div>
+    </div>
+
+    <!-- 退去記録（退去選択時のみ表示） -->
+    <div class="section-block" id="tc-leave-block" style="display:none;">
+      <div class="section-block-title">🚪 退去記録</div>
+      <div class="fg"><label class="fl">退去日</label><input type="date" class="fi" id="tc-leave-date"></div>
+      <div class="fg">
+        <label class="fl">原状回復PDFリンク</label>
+        <div id="tc-recovery-links"></div>
+        <button class="btn-add-row" onclick="addPdfLinkRow('tc-recovery-links')">＋ リンクを追加</button>
+      </div>
+      <div class="fg">
+        <label class="fl" style="margin-bottom:8px;">敷金精算</label>
+        <div style="background:var(--bg3);border-radius:10px;padding:12px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <div><div style="font-size:12px;color:var(--text2);margin-bottom:4px;">敷金（自動取得）</div><div style="font-size:15px;font-weight:700;color:var(--accent2);" id="tc-deposit-display">¥0</div></div>
+            <div class="fg" style="margin:0;"><label class="fl">原状回復費用（円）</label><input type="number" inputmode="numeric" class="fi" id="tc-recovery-cost" placeholder="0" oninput="calcDeposit()"></div>
+          </div>
+          <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:13px;color:var(--text2);">返還額</span>
+            <span style="font-size:18px;font-weight:700;" id="tc-refund-display">¥0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===== 月次収支入力画面 ===== -->
+<div class="sub-screen" id="screen-tax-month">
+  <div class="sub-header">
+    <button class="sub-back-btn" onclick="closeScreen('screen-tax-month')">戻る</button>
+    <div class="sub-title" id="tax-month-title">月次収支入力</div>
+  </div>
+  <div class="sub-btn-bar">
+    <button class="btn btn-primary btn-sm" onclick="saveTaxMonth()">保存する</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-tax-month')">キャンセル</button>
+  </div>
+  <div class="sub-content">
+    <input type="hidden" id="tm-year">
+    <input type="hidden" id="tm-month">
+    <div class="section-block">
+      <div class="section-block-title">💴 収支入力</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="fg"><label class="fl">家賃収入（円）</label><input type="number" inputmode="numeric" class="fi" id="tm-rent" placeholder="0"></div>
+        <div class="fg"><label class="fl">地代（円）</label><input type="number" inputmode="numeric" class="fi" id="tm-land" placeholder="0"></div>
+        <div class="fg"><label class="fl">管理費（円）</label><input type="number" inputmode="numeric" class="fi" id="tm-mgmt" placeholder="0"></div>
+        <div class="fg"><label class="fl">修繕費（円）</label><input type="number" inputmode="numeric" class="fi" id="tm-repair" placeholder="0"></div>
+      </div>
+      <div class="fg"><label class="fl">その他支出（円）</label><input type="number" inputmode="numeric" class="fi" id="tm-other" placeholder="0"></div>
+      <div class="fg"><label class="fl">不動産工房 報告メール受信日</label><input type="date" class="fi" id="tm-report-date"></div>
+      <div class="fg"><label class="fl">メモ</label><textarea class="fi" id="tm-memo" placeholder="経費の内訳など"></textarea></div>
+    </div>
+    <div class="section-block">
+      <div class="section-block-title">📎 関連書類リンク</div>
+      <div id="tm-pdf-links"></div>
+      <button class="btn-add-row" onclick="addPdfLinkRow('tm-pdf-links')">＋ リンクを追加</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 確定申告ステータス編集画面 ===== -->
+<div class="sub-screen" id="screen-tax-status">
+  <div class="sub-header">
+    <button class="sub-back-btn" onclick="closeScreen('screen-tax-status')">戻る</button>
+    <div class="sub-title" id="tax-status-title">申告ステータス</div>
+  </div>
+  <div class="sub-btn-bar">
+    <button class="btn btn-primary btn-sm" onclick="saveTaxStatus()">保存する</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-tax-status')">キャンセル</button>
+  </div>
+  <div class="sub-content">
+    <input type="hidden" id="ts-year">
+    <div class="section-block">
+      <div class="section-block-title">📋 申告情報</div>
+      <div class="fg">
+        <label class="fl">申告種別</label>
+        <div style="display:flex;gap:8px;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;padding:10px;border:1.5px solid var(--border);border-radius:8px;flex:1;background:var(--bg4);">
+            <input type="radio" name="ts-type" value="白色申告" id="ts-type-white" checked> 白色申告
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;padding:10px;border:1.5px solid var(--border);border-radius:8px;flex:1;background:var(--bg4);">
+            <input type="radio" name="ts-type" value="青色申告" id="ts-type-blue"> 青色申告
+          </label>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="fg"><label class="fl">提出期間 開始</label><input type="date" class="fi" id="ts-period-start"></div>
+        <div class="fg"><label class="fl">提出期間 終了</label><input type="date" class="fi" id="ts-period-end"></div>
+      </div>
+      <div class="fg">
+        <label class="fl">確定申告年月日（入力で提出済みに）</label>
+        <input type="date" class="fi" id="ts-submit-date">
+      </div>
+      <div class="fg">
+        <label class="fl">納税額（マイナスで還付）</label>
+        <input type="number" inputmode="numeric" class="fi" id="ts-tax-amount" placeholder="例：15000（還付の場合は-15000）">
+      </div>
+      <div class="fg"><label class="fl">メモ</label><textarea class="fi" id="ts-memo" placeholder="備考・メモ"></textarea></div>
+    </div>
+    <div class="section-block">
+      <div class="section-block-title">📎 関連書類リンク</div>
+      <div id="ts-pdf-links"></div>
+      <button class="btn-add-row" onclick="addPdfLinkRow('ts-pdf-links')">＋ リンクを追加</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 個人収支編集画面 ===== -->
+<div class="sub-screen" id="screen-tax-personal">
+  <div class="sub-header">
+    <button class="sub-back-btn" onclick="closeScreen('screen-tax-personal')">戻る</button>
+    <div class="sub-title" id="tax-personal-title">個人収支入力</div>
+  </div>
+  <div class="sub-btn-bar">
+    <button class="btn btn-primary btn-sm" onclick="saveTaxPersonal()">保存する</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-tax-personal')">キャンセル</button>
+  </div>
+  <div class="sub-content">
+    <input type="hidden" id="tp-year">
+    <div class="section-block">
+      <div class="section-block-title">💴 本人年金</div>
+      <div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:10px;font-size:13px;color:var(--text2);">
+        種別：老齢基礎年金　生年月日：昭和14年1月31日
+      </div>
+      <div class="fg"><label class="fl">年間収入金額（円）</label><input type="number" inputmode="numeric" class="fi" id="tp-pension" placeholder="0"></div>
+    </div>
+    <div class="section-block">
+      <div class="section-block-title">🏥 社会保険料（源泉徴収）</div>
+      <div class="fg"><label class="fl">介護保険料額（円）</label><input type="number" inputmode="numeric" class="fi" id="tp-care" placeholder="0" oninput="calcSocialInsurance()"></div>
+      <div class="fg"><label class="fl">後期高齢者医療保険料額（円）</label><input type="number" inputmode="numeric" class="fi" id="tp-medical" placeholder="0" oninput="calcSocialInsurance()"></div>
+      <div style="background:var(--accent-light);border-radius:8px;padding:10px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:13px;font-weight:600;color:var(--accent2);">社会保険料の額（合計）</span>
+        <span style="font-size:16px;font-weight:700;color:var(--accent2);" id="tp-social-total">¥0</span>
+      </div>
+    </div>
+    <div class="section-block">
+      <div class="section-block-title">🏥 医療費</div>
+      <div class="fg"><label class="fl">年間医療費合計（円）</label><input type="number" inputmode="numeric" class="fi" id="tp-medical-fee" placeholder="0"></div>
+    </div>
+    <div class="section-block">
+      <div class="section-block-title">🛡️ 損害保険料</div>
+      <div id="tp-insurance-ref" style="margin-bottom:8px;"></div>
+      <div class="fg"><label class="fl">年間払込予定額（円）</label><input type="number" inputmode="numeric" class="fi" id="tp-insurance" placeholder="0"></div>
+    </div>
+  </div>
+</div>
 
 <!-- ===== 郵便物 詳細・編集画面 ===== -->
 <div class="sub-screen" id="screen-mail-edit">
   <div class="sub-header">
-    <button class="sub-back" onclick="closeMailEdit()">←</button>
+    <button class="sub-back-btn" onclick="closeMailEdit()">戻る</button>
     <div class="sub-title" id="mail-edit-title">郵便物を記録</div>
+  </div>
+  <div class="sub-btn-bar">
+    <button class="btn btn-primary btn-sm" onclick="saveMail()">保存する</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeMailEdit()">キャンセル</button>
+    <button class="btn btn-danger btn-sm" id="me-del-btn" onclick="deleteMail()" style="display:none;">削除</button>
   </div>
   <div class="sub-content">
     <input type="hidden" id="me-id">
@@ -548,7 +1047,13 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
           </div>
           <div class="taiou-ts" id="ts-pdf"></div>
           <div class="taiou-sub" id="sub-pdf" style="display:none;">
-            <input type="text" placeholder="Google Drive URL" id="taiou-pdf-url">
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="url" placeholder="Google Drive URL" id="taiou-pdf-url" style="flex:1;" oninput="updatePdfLink()">
+              <a id="taiou-pdf-link-btn" href="#" target="_blank" rel="noopener"
+                style="display:none;background:var(--accent2);color:#fff;border-radius:8px;padding:9px 12px;font-size:13px;white-space:nowrap;text-decoration:none;">
+                📎 開く
+              </a>
+            </div>
           </div>
         </div>
         <div class="taiou-item" id="taiou-filing">
@@ -581,19 +1086,13 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
         </div>
       </div>
     </div>
-
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="saveMail()">保存する</button>
-      <button class="btn btn-secondary" onclick="closeMailEdit()">キャンセル</button>
-      <button class="btn btn-danger btn-sm" id="me-del-btn" onclick="deleteMail()" style="display:none;">削除</button>
-    </div>
   </div>
 </div>
 
 <!-- ===== ファイル名マスタ ===== -->
 <div class="sub-screen" id="screen-file-master">
   <div class="sub-header">
-    <button class="sub-back" onclick="closeScreen('screen-file-master')">←</button>
+    <button class="sub-back-btn" onclick="closeScreen('screen-file-master')">戻る</button>
     <div class="sub-title">ファイル名マスタ</div>
   </div>
   <div class="sub-content">
@@ -613,7 +1112,7 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <!-- ===== 保管場所マスタ ===== -->
 <div class="sub-screen" id="screen-location-master">
   <div class="sub-header">
-    <button class="sub-back" onclick="closeScreen('screen-location-master')">←</button>
+    <button class="sub-back-btn" onclick="closeScreen('screen-location-master')">戻る</button>
     <div class="sub-title">保管場所マスタ</div>
   </div>
   <div class="sub-content">
@@ -630,25 +1129,123 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
   </div>
 </div>
 
-<!-- ===== 差出人編集 ===== -->
-<div class="sub-screen" id="screen-sender-edit">
+<!-- ===== 重要書類 詳細画面 ===== -->
+<div class="sub-screen" id="screen-doc-detail">
   <div class="sub-header">
-    <button class="sub-back" onclick="closeScreen('screen-sender-edit')">←</button>
-    <div class="sub-title">差出人を編集</div>
+    <div class="sub-title" id="doc-detail-title">書類詳細</div>
+  </div>
+  <div class="sub-content" id="doc-detail-content"></div>
+</div>
+
+<!-- ===== 重要書類 編集画面 ===== -->
+<div class="sub-screen" id="screen-doc-edit">
+  <div class="sub-header">
+    <button class="sub-back-btn" onclick="closeScreen('screen-doc-edit')">戻る</button>
+    <div class="sub-title" id="doc-edit-title">書類を追加</div>
+  </div>
+  <div class="sub-btn-bar">
+    <button class="btn btn-primary btn-sm" onclick="saveDoc()">保存する</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-doc-edit')">キャンセル</button>
+    <button class="btn btn-danger btn-sm" id="de-del-btn" onclick="deleteDoc()" style="display:none;">削除</button>
   </div>
   <div class="sub-content">
+    <input type="hidden" id="de-id">
+
+    <!-- 基本情報 -->
     <div class="section-block">
-      <input type="hidden" id="se-id">
-      <div class="fg"><label class="fl">差出人名 *</label><input type="text" class="fi" id="se-name"></div>
-      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;">
-        <div class="fg"><label class="fl">郵便番号</label><input type="text" class="fi" id="se-zip"></div>
-        <div class="fg"><label class="fl">電話番号</label><input type="tel" class="fi" id="se-tel"></div>
+      <div class="section-block-title">📄 基本情報</div>
+      <div class="fg">
+        <label class="fl">名前 *</label>
+        <input type="text" class="fi" id="de-name" placeholder="例：介護保険被保険者証">
+        <div class="fi-error" id="de-name-err">名前を入力してください</div>
       </div>
-      <div class="fg"><label class="fl">住所</label><input type="text" class="fi" id="se-addr"></div>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="updateSender()">保存する</button>
-        <button class="btn btn-secondary" onclick="closeScreen('screen-sender-edit')">キャンセル</button>
+      <div class="fg">
+        <label class="fl">カテゴリ</label>
+        <select class="fi" id="de-category">
+          <option value="介護・医療">介護・医療</option>
+          <option value="行政・身分証">行政・身分証</option>
+          <option value="金融・カード">金融・カード</option>
+          <option value="保険">保険</option>
+          <option value="不動産・契約">不動産・契約</option>
+          <option value="年金">年金</option>
+          <option value="その他">その他</option>
+        </select>
       </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="fg">
+          <label class="fl">発行日</label>
+          <input type="date" class="fi" id="de-issue">
+        </div>
+        <div class="fg">
+          <label class="fl">有効期限</label>
+          <input type="date" class="fi" id="de-expiry" oninput="onDeExpiryInput()">
+        </div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;margin-bottom:6px;">
+        <input type="checkbox" id="de-no-expiry" style="width:17px;height:17px;" onchange="toggleDeExpiry()">
+        有効期限なし
+      </label>
+      <div class="fi-error" id="de-expiry-err">有効期限を入力するか「有効期限なし」にチェックしてください</div>
+    </div>
+
+    <!-- 番号ID -->
+    <div class="section-block">
+      <div class="section-block-title">🔢 番号・ID</div>
+      <div id="de-numbers"></div>
+      <button class="btn-add-row" onclick="addDeNumberRow()">＋ 番号を追加</button>
+    </div>
+
+    <!-- パスワード・暗証番号 -->
+    <div class="section-block">
+      <div class="section-block-title">🔐 パスワード・暗証番号</div>
+      <div id="de-passwords"></div>
+      <button class="btn-add-row" onclick="addDePasswordRow()">＋ パスワードを追加</button>
+    </div>
+
+    <!-- 契約書追加項目 -->
+    <div class="section-block" id="de-contract-block" style="display:none;">
+      <div class="section-block-title">📝 契約情報</div>
+      <div class="fg"><label class="fl">契約者名</label><input type="text" class="fi" id="de-contractor" placeholder="例：山田花子"></div>
+      <div class="fg"><label class="fl">住所</label><input type="text" class="fi" id="de-contract-addr" placeholder="例：東京都世田谷区…"></div>
+      <div class="fg"><label class="fl">契約内容</label><textarea class="fi" id="de-contract-content" placeholder="契約内容の概要"></textarea></div>
+      <div class="fg"><label class="fl">担当者名</label><input type="text" class="fi" id="de-contact-name" placeholder="例：田中次郎"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="fg"><label class="fl">電話番号</label><input type="tel" class="fi" id="de-contact-tel" placeholder="03-0000-0000"></div>
+        <div class="fg"><label class="fl">メール</label><input type="email" class="fi" id="de-contact-email" placeholder="example@email.com"></div>
+      </div>
+    </div>
+
+    <!-- 保管場所・ファイル -->
+    <div class="section-block">
+      <div class="section-block-title">📦 保管・ファイル情報</div>
+      <div class="fg">
+        <label class="fl">保管場所</label>
+        <select class="fi" id="de-location">
+          <option value="">保管場所を選択</option>
+        </select>
+        <input type="text" class="fi" id="de-location-input" placeholder="または直接入力" style="margin-top:6px;">
+      </div>
+      <div class="fg">
+        <label class="fl">ファイル名</label>
+        <select class="fi" id="de-filename">
+          <option value="">ファイル名を選択</option>
+        </select>
+        <input type="text" class="fi" id="de-filename-input" placeholder="または直接入力" style="margin-top:6px;">
+      </div>
+      <div class="fg"><label class="fl">メモ</label><textarea class="fi" id="de-memo" placeholder="重要な情報・注意事項など"></textarea></div>
+    </div>
+
+    <!-- PDFリンク -->
+    <div class="section-block">
+      <div class="section-block-title">📎 関連書類リンク</div>
+      <div id="de-pdf-links"></div>
+      <button class="btn-add-row" onclick="addPdfLinkRow('de-pdf-links')">＋ リンクを追加</button>
+    </div>
+
+    <!-- 写真 -->
+    <div class="section-block">
+      <div class="section-block-title">📷 写真（最大4枚）</div>
+      <div class="img-upload-grid" id="de-photos"></div>
     </div>
   </div>
 </div>
@@ -656,8 +1253,12 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <!-- ===== インポート ===== -->
 <div class="sub-screen" id="screen-import">
   <div class="sub-header">
-    <button class="sub-back" onclick="closeScreen('screen-import')">←</button>
+    <button class="sub-back-btn" onclick="closeScreen('screen-import')">戻る</button>
     <div class="sub-title">データをインポート</div>
+  </div>
+  <div class="sub-btn-bar">
+    <button class="btn btn-primary btn-sm" id="import-exec-btn" onclick="executeImport()" style="display:none;">インポート実行</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-import')">キャンセル</button>
   </div>
   <div class="sub-content">
     <div class="section-block">
@@ -688,13 +1289,9 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
         <label class="fl">JSONファイルを選択</label>
         <input type="file" accept=".json" class="fi" id="import-file" onchange="previewImport()">
       </div>
-      <div id="import-preview" style="display:none;" class="section-block" style="background:var(--bg3);">
+      <div id="import-preview" style="display:none;" class="section-block">
         <div class="section-block-title">📊 インポート内容の確認</div>
         <div id="import-preview-content" style="font-size:13px;color:var(--text2);line-height:1.8;"></div>
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" id="import-exec-btn" onclick="executeImport()" style="display:none;">インポート実行</button>
-        <button class="btn btn-secondary" onclick="closeScreen('screen-import')">キャンセル</button>
       </div>
     </div>
   </div>
@@ -703,18 +1300,18 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <!-- ===== PIN変更画面 ===== -->
 <div class="sub-screen" id="screen-pin-change">
   <div class="sub-header">
-    <button class="sub-back" onclick="closeScreen('screen-pin-change')">←</button>
+    <button class="sub-back-btn" onclick="closeScreen('screen-pin-change')">戻る</button>
     <div class="sub-title">PINコードの変更</div>
+  </div>
+  <div class="sub-btn-bar">
+    <button class="btn btn-primary btn-sm" onclick="changePin()">変更する</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-pin-change')">閉じる</button>
   </div>
   <div class="sub-content">
     <div class="section-block">
       <div class="fg"><label class="fl">新しいPIN（4桁）</label><input type="password" inputmode="numeric" maxlength="4" class="fi" id="new-pin" placeholder="4桁の数字"></div>
       <div class="fg"><label class="fl">確認（もう一度）</label><input type="password" inputmode="numeric" maxlength="4" class="fi" id="confirm-pin" placeholder="4桁の数字"></div>
-      <div id="pin-change-msg" style="font-size:13px;min-height:18px;margin-bottom:10px;"></div>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="changePin()">変更する</button>
-        <button class="btn btn-secondary" onclick="closeScreen('screen-pin-change')">閉じる</button>
-      </div>
+      <div id="pin-change-msg" style="font-size:13px;min-height:18px;"></div>
     </div>
   </div>
 </div>
@@ -722,11 +1319,12 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <!-- ===== 差出人マスタ画面 ===== -->
 <div class="sub-screen" id="screen-sender-master">
   <div class="sub-header">
-    <button class="sub-back" onclick="closeScreen('screen-sender-master')">←</button>
+    <button class="sub-back-btn" onclick="closeScreen('screen-sender-master')">戻る</button>
     <div class="sub-title">差出人マスタ</div>
   </div>
   <div class="sub-content">
-    <div class="section-block">
+    <!-- 新規登録フォーム -->
+    <div class="section-block" id="sm-add-form">
       <div class="section-block-title">新規登録</div>
       <div class="fg"><label class="fl">差出人名 *</label><input type="text" class="fi" id="sm-name" placeholder="例：日本年金機構"></div>
       <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;">
@@ -735,6 +1333,21 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
       </div>
       <div class="fg"><label class="fl">住所</label><input type="text" class="fi" id="sm-addr" placeholder="例：東京都千代田区…"></div>
       <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="saveSender()">登録する</button></div>
+    </div>
+    <!-- インライン編集フォーム（編集時のみ表示） -->
+    <div class="section-block" id="sm-edit-form" style="display:none;border:2px solid var(--accent);border-radius:var(--radius);">
+      <div class="section-block-title">✏️ 編集中</div>
+      <input type="hidden" id="se-id">
+      <div class="fg"><label class="fl">差出人名 *</label><input type="text" class="fi" id="se-name"></div>
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;">
+        <div class="fg"><label class="fl">郵便番号</label><input type="text" class="fi" id="se-zip"></div>
+        <div class="fg"><label class="fl">電話番号</label><input type="tel" class="fi" id="se-tel"></div>
+      </div>
+      <div class="fg"><label class="fl">住所</label><input type="text" class="fi" id="se-addr"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary btn-sm" onclick="updateSender()">保存する</button>
+        <button class="btn btn-secondary btn-sm" onclick="cancelSenderEdit()">キャンセル</button>
+      </div>
     </div>
     <div class="sec-title">登録済み差出人</div>
     <div id="sender-list"></div>
@@ -748,7 +1361,7 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <!-- ===== 自由タグ管理画面 ===== -->
 <div class="sub-screen" id="screen-tag-master">
   <div class="sub-header">
-    <button class="sub-back" onclick="closeScreen('screen-tag-master')">←</button>
+    <button class="sub-back-btn" onclick="closeScreen('screen-tag-master')">戻る</button>
     <div class="sub-title">自由タグ管理</div>
   </div>
   <div class="sub-content">
@@ -767,8 +1380,14 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 </div>
 
 <script>
+// ===== Supabase設定 =====
+const SUPABASE_URL = 'https://ndbwijlautdtthljkuzf.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Lf28B6u9gswaVX-Eg7htsA_57N6-_Z2';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let currentUser = null;
+
 // ===== データ管理 =====
-const KEY = 'haha_app_v1';
+const KEY = 'babaminekoapp_v1'; // フォールバック用
 let db = {
   pin: null,
   mails: [],
@@ -776,12 +1395,43 @@ let db = {
   customTags: [],
   fileMaster: [],
   locationMaster: [],
-  lastExportDate: null
+  lastExportDate: null,
+  docs: [],
+  tenants: [],
+  tenantHouse: {},
+  taxData: {}
 };
 
-function loadDB(){ try{ const d=localStorage.getItem(KEY); if(d) db=JSON.parse(d); }catch(e){} }
-function saveDB(){ try{ localStorage.setItem(KEY,JSON.stringify(db)); }catch(e){} }
-loadDB();
+async function loadDB(){
+  try{
+    if(currentUser){
+      const {data,error}=await supabase
+        .from('app_data')
+        .select('data')
+        .eq('user_id',currentUser.id)
+        .single();
+      if(error&&error.code!=='PGRST116') throw error;
+      if(data?.data) db={...db,...data.data};
+    } else {
+      // フォールバック：localStorage
+      const d=localStorage.getItem(KEY);
+      if(d) db=JSON.parse(d);
+    }
+  }catch(e){ console.error('loadDB error:',e); }
+}
+
+async function saveDB(){
+  try{
+    if(currentUser){
+      const {error}=await supabase
+        .from('app_data')
+        .upsert({user_id:currentUser.id, data:db},{onConflict:'user_id'});
+      if(error) throw error;
+    } else {
+      localStorage.setItem(KEY,JSON.stringify(db));
+    }
+  }catch(e){ console.error('saveDB error:',e); }
+}
 
 // ===== 固定タグ =====
 const FIXED_TAGS = ['白色申告','重要書類','不動産','家族・友人'];
@@ -844,31 +1494,6 @@ function checkPin(){
     }
   }
 }
-function unlock(){
-  document.getElementById('pin-screen').style.display='none';
-  document.getElementById('app').style.display='flex';
-  document.getElementById('fab').classList.add('visible');
-  renderAll();
-}
-function lockApp(){
-  pinBuf=''; pinMode='verify'; updDots();
-  document.getElementById('pin-error').textContent='';
-  document.getElementById('pin-prompt').textContent='PINコードを入力してください';
-  document.getElementById('app').style.display='none';
-  document.getElementById('fab').classList.remove('visible');
-  document.getElementById('pin-screen').style.display='flex';
-  closeAllScreens();
-}
-function changePin(){
-  const np=document.getElementById('new-pin').value;
-  const cp=document.getElementById('confirm-pin').value;
-  const msg=document.getElementById('pin-change-msg');
-  if(!/^\d{4}$/.test(np)){msg.style.color='red';msg.textContent='4桁の数字を入力してください';return;}
-  if(np!==cp){msg.style.color='red';msg.textContent='PINが一致しません';return;}
-  db.pin=np; saveDB(); msg.style.color='green'; msg.textContent='✓ PINを変更しました';
-  document.getElementById('new-pin').value=''; document.getElementById('confirm-pin').value='';
-}
-
 // ===== タブ =====
 function showTab(tab){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -876,6 +1501,8 @@ function showTab(tab){
   document.getElementById('page-'+tab).classList.add('active');
   document.getElementById('tab-'+tab).classList.add('active');
   document.getElementById('fab').classList.toggle('visible', tab==='mail');
+  document.getElementById('fab-docs').classList.toggle('visible', tab==='docs');
+  document.getElementById('fab-tenant').classList.toggle('visible', tab==='tenant');
 }
 
 // ===== サブ画面 =====
@@ -884,7 +1511,7 @@ function closeScreen(id){ document.getElementById(id).classList.remove('active')
 function closeAllScreens(){ document.querySelectorAll('.sub-screen').forEach(s=>s.classList.remove('active')); }
 
 // ===== フィルタ状態 =====
-let filterState = { mode:'miatari', tags:[], sender:'', year:'' };
+let filterState = { mode:'miatari', tags:[], sender:'', year:'', kanshi:false };
 let filterOpen = false;
 
 function setMode(m){
@@ -897,16 +1524,26 @@ function setMode(m){
 function toggleFilter(){
   filterOpen=!filterOpen;
   document.getElementById('filter-panel').classList.toggle('open',filterOpen);
-  document.getElementById('filter-toggle-btn').textContent='';
-  const cnt=countActiveFilters();
-  document.getElementById('filter-toggle-btn').innerHTML=filterOpen
-    ?`<span>閉じる</span>`
-    :`<span>絞り込み</span>${cnt>0?`<span style="background:var(--accent2);color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;">${cnt}</span>`:''}`;
-  document.getElementById('filter-toggle-btn').classList.toggle('has-filter',cnt>0);
+  updateFilterBtn();
+}
+
+function toggleKanshiFilter(){
+  filterState.kanshi=!filterState.kanshi;
+  document.getElementById('filter-kanshi-btn').classList.toggle('active',filterState.kanshi);
+  applyFilter();
 }
 
 function countActiveFilters(){
-  return filterState.tags.length + (filterState.sender?1:0) + (filterState.year?1:0);
+  return filterState.tags.length + (filterState.sender?1:0) + (filterState.year?1:0) + (filterState.kanshi?1:0);
+}
+
+function updateFilterBtn(){
+  const cnt=countActiveFilters();
+  const btn=document.getElementById('filter-toggle-btn');
+  btn.innerHTML=filterOpen
+    ?`<span>閉じる</span>`
+    :`<span>絞り込み</span>${cnt>0?`<span style="background:var(--accent2);color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;">${cnt}</span>`:''}`;
+  btn.classList.toggle('has-filter',cnt>0);
 }
 
 function buildFilterUI(){
@@ -949,12 +1586,7 @@ function buildFilterUI(){
 function applyFilter(){
   filterState.sender=document.getElementById('filter-sender').value;
   filterState.year=document.getElementById('filter-year').value;
-  const cnt=countActiveFilters();
-  const btn=document.getElementById('filter-toggle-btn');
-  btn.innerHTML=filterOpen
-    ?`<span>閉じる</span>`
-    :`<span>絞り込み</span>${cnt>0?`<span style="background:var(--accent2);color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;">${cnt}</span>`:''}`;
-  btn.classList.toggle('has-filter',cnt>0);
+  updateFilterBtn();
   renderMailList();
 }
 
@@ -962,10 +1594,11 @@ function filterMails(){
   let list=[...db.mails];
   // 未対応のみ
   if(filterState.mode==='miatari') list=list.filter(m=>!m.kanryo);
-  // タグ（「到着監視」タグはkanshiフラグとも連動）
+  // 到着監視専用フィルタ（kanshiフラグで絞り込み、タグと独立）
+  if(filterState.kanshi) list=list.filter(m=>!!m.kanshi);
+  // タグ
   if(filterState.tags.length>0) list=list.filter(m=>{
     const effectiveTags=[...(m.tags||[])];
-    if(m.kanshi && !effectiveTags.includes('到着監視')) effectiveTags.push('到着監視');
     return filterState.tags.every(t=>effectiveTags.includes(t));
   });
   // 差出人
@@ -994,10 +1627,8 @@ function checkAlerts(){
     banner.innerHTML=`<div class="alert-banner danger">⚠️ <strong>到着遅延</strong><br>`+
       alerts.map(m=>`${m.title}（到着予定：${m.kanshiDate}）`).join('<br>')+`</div>`;
   } else { banner.innerHTML=''; }
-  // ヘッダーバッジ
-  const badge=document.getElementById('header-badge');
-  if(alerts.length>0){ badge.textContent='⚠️ '+alerts.length+'件'; badge.style.display='inline-block'; }
-  else badge.style.display='none';
+  // ヘッダーバッジ（郵便＋書類の合算）
+  updateHeaderBadge();
 }
 
 // ===== 郵便物レンダリング =====
@@ -1044,6 +1675,14 @@ function renderMailList(){
       ?`<span class="status-chip" style="background:#fdecea;color:#b83232;">⚠️ 到着遅延</span>`
       :'';
 
+    // PDFリンク（pdfLinks + taiou.pdf.url）をまとめて収集
+    const allPdfLinks=[];
+    if(m.pdfLinks&&m.pdfLinks.length>0) m.pdfLinks.forEach(l=>{ if(l.url) allPdfLinks.push(l); });
+    if(m.taiou?.pdf?.url) allPdfLinks.push({name:'PDFファイル',url:m.taiou.pdf.url});
+    const pdfIconHtml=allPdfLinks.length>0
+      ?allPdfLinks.map(l=>`<a href="${l.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:3px;background:var(--accent-light);color:var(--accent2);border-radius:20px;padding:3px 9px;font-size:11px;text-decoration:none;font-weight:600;">📎 ${l.name||'PDF'}</a>`).join('')
+      :'';
+
     div.innerHTML=`
       <div class="mail-card-inner">
         <div class="mail-card-top">
@@ -1056,6 +1695,7 @@ function renderMailList(){
           ${kanshiBadge}
           ${chips}
         </div>
+        ${pdfIconHtml?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">${pdfIconHtml}</div>`:''}
         ${m.amount?`<div style="font-size:14px;font-weight:700;color:var(--accent2);margin-top:5px;">¥${Number(m.amount).toLocaleString()}</div>`:''}
       </div>
     `;
@@ -1076,6 +1716,18 @@ function addPdfLinkRow(wrapId, name='', url=''){
     <input type="url" placeholder="https://drive.google.com/..." value="${url}">
     <button class="btn-del-row" onclick="document.getElementById('${id}').remove()">✕</button>
   `;
+  // URLが入力されたらリンクボタンを表示
+  const urlInput=div.querySelectorAll('input')[1];
+  const linkBtn=document.createElement('a');
+  linkBtn.textContent='📎'; linkBtn.target='_blank'; linkBtn.rel='noopener';
+  linkBtn.style.cssText='display:'+(url?'flex':'none')+';align-items:center;justify-content:center;background:var(--accent-light);color:var(--accent2);border-radius:8px;padding:9px 10px;font-size:14px;text-decoration:none;flex-shrink:0;';
+  if(url) linkBtn.href=url;
+  urlInput.addEventListener('input',()=>{
+    const v=urlInput.value.trim();
+    linkBtn.href=v||'#';
+    linkBtn.style.display=v?'flex':'none';
+  });
+  div.appendChild(linkBtn);
   wrap.appendChild(div);
 }
 function getPdfLinks(wrapId){
@@ -1139,7 +1791,12 @@ function getPhotos(wrapId){
   return [...document.getElementById(wrapId).querySelectorAll('.img-slot')].map(s=>s.dataset.img||'');
 }
 
-// ===== 対応状況 =====
+function updatePdfLink(){
+  const url=document.getElementById('taiou-pdf-url').value.trim();
+  const btn=document.getElementById('taiou-pdf-link-btn');
+  if(url){ btn.href=url; btn.style.display='inline-flex'; }
+  else btn.style.display='none';
+}
 let taiouState={};
 function initTaiou(data){
   taiouState=data||{};
@@ -1152,7 +1809,10 @@ function initTaiou(data){
     chk.classList.toggle('checked',!!d.done);
     ts.textContent=d.done&&d.ts?d.ts:'';
     if(sub){ sub.style.display=d.done?'block':'none'; }
-    if(k==='pdf'&&d.url) document.getElementById('taiou-pdf-url').value=d.url||'';
+    if(k==='pdf'&&d.url){
+      document.getElementById('taiou-pdf-url').value=d.url||'';
+      updatePdfLink();
+    }
     if(k==='filing'){
       if(d.name){
         const sel=document.getElementById('taiou-filing-name');
@@ -1324,16 +1984,21 @@ function saveMail(){
   const senderId=document.getElementById('me-sender-select').value;
   const senderName=document.getElementById('me-sender-name').value.trim();
 
-  // 差出人をマスタ保存
+  // 差出人をマスタ保存（未登録かつチェックONの場合のみ・重複チェック付き）
   if(!senderId && senderName && document.getElementById('me-save-sender').checked){
-    const newSender={
-      id: Date.now().toString(),
-      name: senderName,
-      zip: document.getElementById('me-sender-zip').value.trim(),
-      tel: document.getElementById('me-sender-tel').value.trim(),
-      addr: document.getElementById('me-sender-addr').value.trim()
-    };
-    db.senders.push(newSender);
+    const alreadyExists=db.senders.some(s=>s.name===senderName);
+    if(!alreadyExists){
+      const newSender={
+        id: Date.now().toString(),
+        name: senderName,
+        zip: document.getElementById('me-sender-zip').value.trim(),
+        tel: document.getElementById('me-sender-tel').value.trim(),
+        addr: document.getElementById('me-sender-addr').value.trim()
+      };
+      db.senders.push(newSender);
+    }
+    // 保存後はチェックをリセット
+    document.getElementById('me-save-sender').checked=false;
   }
 
   const taiouData=getTaiouData();
@@ -1364,6 +2029,7 @@ function saveMail(){
   renderMailList();
   buildFilterUI();
   checkAlerts();
+  updateSettingsCounts();
 }
 
 function deleteMail(){
@@ -1404,35 +2070,41 @@ function renderSenderList(){
   if(db.senders.length===0){empty.style.display='block';return;}
   empty.style.display='none';
   db.senders.forEach(s=>{
-    const div=document.createElement('div'); div.className='sender-item';
-    div.innerHTML=`
-      <div>
-        <div class="sender-name">${s.name}</div>
-        <div class="sender-sub">${[s.zip,s.addr,s.tel].filter(Boolean).join(' ・ ')}</div>
-      </div>
-      <div style="display:flex;gap:6px;">
-        <button class="btn btn-secondary btn-sm" id="edit-sender-${s.id}">編集</button>
-        <button class="btn btn-danger btn-sm" id="del-sender-${s.id}">削除</button>
-      </div>
-    `;
-    div.querySelector(`#edit-sender-${s.id}`).addEventListener('click', e=>{
-      e.stopPropagation(); openSenderEdit(s.id);
-    });
-    div.querySelector(`#del-sender-${s.id}`).addEventListener('click', e=>{
-      e.stopPropagation(); deleteSender(s.id);
-    });
+    const div=document.createElement('div'); div.className='sender-item'; div.dataset.sid=s.id;
+    const info=document.createElement('div');
+    info.innerHTML=`<div class="sender-name">${s.name}</div><div class="sender-sub">${[s.zip,s.addr,s.tel].filter(Boolean).join(' ・ ')}</div>`;
+    const btnWrap=document.createElement('div'); btnWrap.style.cssText='display:flex;gap:6px;flex-shrink:0;';
+    const editBtn=document.createElement('button'); editBtn.className='btn btn-secondary btn-sm'; editBtn.textContent='編集';
+    editBtn.addEventListener('click', e=>{ e.stopPropagation(); openSenderEdit(s.id); });
+    const delBtn=document.createElement('button'); delBtn.className='btn btn-danger btn-sm'; delBtn.textContent='削除';
+    delBtn.addEventListener('click', e=>{ e.stopPropagation(); deleteSender(s.id); });
+    btnWrap.appendChild(editBtn); btnWrap.appendChild(delBtn);
+    div.appendChild(info); div.appendChild(btnWrap);
     list.appendChild(div);
   });
 }
 
 function openSenderEdit(id){
   const s=db.senders.find(x=>x.id===id); if(!s) return;
+  // 先にフォームを表示してからセット（display:noneだとvalueが効かない場合があるため）
+  document.getElementById('sm-add-form').style.display='none';
+  document.getElementById('sm-edit-form').style.display='block';
+  // 値をセット
   document.getElementById('se-id').value=id;
   document.getElementById('se-name').value=s.name||'';
   document.getElementById('se-zip').value=s.zip||'';
   document.getElementById('se-tel').value=s.tel||'';
   document.getElementById('se-addr').value=s.addr||'';
-  openScreen('screen-sender-edit');
+  // 編集中の行をハイライト
+  document.querySelectorAll('.sender-item').forEach(el=>{
+    el.style.opacity=el.dataset.sid===id?'1':'0.4';
+  });
+  document.getElementById('sm-edit-form').scrollIntoView({behavior:'smooth'});
+}
+function cancelSenderEdit(){
+  document.getElementById('sm-add-form').style.display='block';
+  document.getElementById('sm-edit-form').style.display='none';
+  document.querySelectorAll('.sender-item').forEach(el=>el.style.opacity='1');
 }
 function updateSender(){
   const id=document.getElementById('se-id').value;
@@ -1444,7 +2116,10 @@ function updateSender(){
     tel:document.getElementById('se-tel').value.trim(),
     addr:document.getElementById('se-addr').value.trim()
   };
-  saveDB(); closeScreen('screen-sender-edit'); renderSenderList(); updateSettingsCounts();
+  saveDB();
+  cancelSenderEdit();
+  renderSenderList();
+  updateSettingsCounts();
 }
 
 // ===== 自由タグ管理 =====
@@ -1632,27 +2307,1347 @@ function exportData(){
   saveDB();
   const blob=new Blob([JSON.stringify({...db,pin:'(hidden)'},null,2)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download=`haha_app_${new Date().toISOString().slice(0,10)}.json`; a.click();
+  a.download=`babaminekoapp_${new Date().toISOString().slice(0,10)}.json`; a.click();
   updateSettingsCounts();
 }
 function resetData(){
   if(!confirm('⚠️ 全てのデータを削除します。この操作は取り消せません。')) return;
   if(!confirm('本当に削除しますか？')) return;
-  const pin=db.pin; db={pin,mails:[],senders:[],customTags:[],fileMaster:[],locationMaster:[],lastExportDate:null};
+  const pin=db.pin; db={pin,mails:[],senders:[],customTags:[],fileMaster:[],locationMaster:[],lastExportDate:null,docs:[],tenants:[],tenantHouse:{},taxData:{}};
   saveDB(); renderAll(); alert('データを削除しました');
+}
+
+// ===== 固定書類の初期データ自動登録 =====
+function initDefaultDocs(){
+  if(!db.docs) db.docs=[];
+  if(db.docsInitialized) return; // 初回のみ実行
+  if(db.docs.length>0) return;   // 既に登録済みなら何もしない
+  DOC_PRESETS.forEach((p,i)=>{
+    db.docs.push({
+      id: 'preset-'+i,
+      name: p.name,
+      icon: p.icon,
+      cat: p.cat,
+      issue: '',
+      expiry: '',
+      noExpiry: false,
+      numbers: [],
+      passwords: [],
+      contractor: '', contractAddr: '', contractContent: '',
+      contactName: '', contactTel: '', contactEmail: '',
+      location: '', filename: '', memo: '',
+      pdfLinks: [], photos: []
+    });
+  });
+  db.docsInitialized = true;
+  saveDB();
+}
+
+// ===== 重要書類 =====
+
+const DOC_PRESETS = [
+  {name:'介護保険被保険者証',    icon:'🏥', cat:'介護・医療'},
+  {name:'介護保険負担割合証',    icon:'📋', cat:'介護・医療'},
+  {name:'後期高齢者医療資格確認書', icon:'🩺', cat:'行政・身分証'},
+  {name:'マイナンバーカード',    icon:'🪪', cat:'行政・身分証'},
+  {name:'郵便局キャッシュカード＋口座情報', icon:'🏧', cat:'金融・カード'},
+  {name:'小田急クレジットカード', icon:'💳', cat:'金融・カード'},
+  {name:'損害保険',             icon:'🛡️', cat:'保険'},
+  {name:'楽天銀行カード＋口座情報', icon:'🏦', cat:'金融・カード'},
+  {name:'遺族年金関連書類',      icon:'📒', cat:'年金'},
+  {name:'本人年金関連書類',      icon:'📗', cat:'年金'},
+  {name:'借地権契約書',          icon:'🏠', cat:'不動産・契約'},
+  {name:'借家賃貸契約書',        icon:'🔑', cat:'不動産・契約'},
+  {name:'不動産管理委託契約書',  icon:'🤝', cat:'不動産・契約'},
+];
+const CONTRACT_CATS = ['不動産・契約'];
+const CAT_ICONS = {'介護・医療':'🏥','行政・身分証':'🪪','金融・カード':'💳','保険':'🛡️','不動産・契約':'🏠','年金':'📒','その他':'📄'};
+const PW_TYPES = ['キャッシュカード','スマホアプリ','Web認証','その他'];
+
+// 有効期限ステータス（書類用）
+function getDocStatus(doc){
+  if(doc.noExpiry) return 'none';
+  if(!doc.expiry) return 'none';
+  const today=new Date(); today.setHours(0,0,0,0);
+  const days=Math.floor((new Date(doc.expiry)-today)/86400000);
+  // マイナンバーは2ヶ月前から警告
+  const warnDays=(doc.name&&doc.name.includes('マイナンバー'))?60:30;
+  if(days<0) return 'expired';
+  if(days<=7) return 'week';
+  if(days<=warnDays) return 'month';
+  return 'valid';
+}
+function getDocDays(doc){
+  if(!doc.expiry||doc.noExpiry) return null;
+  const today=new Date(); today.setHours(0,0,0,0);
+  return Math.floor((new Date(doc.expiry)-today)/86400000);
+}
+function docStatusBadge(doc){
+  const s=getDocStatus(doc); const d=getDocDays(doc);
+  const map={
+    expired:['期限切れ','sb-expired','bl-expired'],
+    week:[`あと${d}日`,'sb-week','bl-week'],
+    month:[`あと${d}日`,'sb-month','bl-month'],
+    valid:['有効','sb-valid','bl-valid'],
+    none:['期限なし','sb-none','bl-none'],
+  };
+  return map[s]||map.none;
+}
+
+// ===== 重要書類 レンダリング =====
+function renderDocs(){
+  if(!db.docs) db.docs=[];
+  const container=document.getElementById('docs-list');
+  const empty=document.getElementById('docs-empty');
+  // アラートバナー
+  const alerts=db.docs.filter(d=>['expired','week','month'].includes(getDocStatus(d)));
+  const banner=document.getElementById('docs-alert-banner');
+  if(alerts.length>0){
+    const sortOrd={expired:0,week:1,month:2};
+    const sorted=[...alerts].sort((a,b)=>sortOrd[getDocStatus(a)]-sortOrd[getDocStatus(b)]);
+    banner.innerHTML=`<div class="alert-banner danger">⚠️ <strong>有効期限のお知らせ</strong><br>`+
+      sorted.map(d=>{
+        const s=getDocStatus(d); const days=getDocDays(d);
+        return s==='expired'?`⛔ ${d.name}：期限切れ（${d.expiry}）`:`⚠️ ${d.name}：あと${days}日（${d.expiry}）`;
+      }).join('<br>')+`</div>`;
+  } else { banner.innerHTML=''; }
+  // ヘッダーバッジ更新
+  updateHeaderBadge();
+
+  container.innerHTML='';
+  if(db.docs.length===0){ empty.style.display='block'; return; }
+  empty.style.display='none';
+
+  db.docs.forEach((doc,idx)=>{
+    const [badgeTxt,badgeCls,borderCls]=docStatusBadge(doc);
+    const icon=doc.icon||CAT_ICONS[doc.cat]||'📄';
+    // 最初の写真を取得
+    const firstPhoto=(doc.photos||[]).find(p=>p);
+    const div=document.createElement('div');
+    div.className='doc-card '+borderCls;
+    // PDFリンクアイコン
+    const hasPdf=(doc.pdfLinks&&doc.pdfLinks.length>0);
+    const div2=document.createElement('div'); div2.className='doc-card-inner';
+    div2.innerHTML=`
+      <div class="doc-card-icon" style="${firstPhoto?'padding:0;overflow:hidden;':''}">
+        ${firstPhoto?`<img src="${firstPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:9px;">`:`${icon}`}
+      </div>
+      <div class="doc-card-body">
+        <div class="doc-card-name">${doc.name}</div>
+        <div class="doc-card-sub">
+          <span class="sbadge ${badgeCls}">${badgeTxt}</span>
+          ${doc.expiry&&!doc.noExpiry?`<span style="font-size:11px;color:var(--text3);">${doc.expiry}</span>`:''}
+          ${hasPdf?`<span style="font-size:11px;color:var(--accent2);">📎</span>`:''}
+        </div>
+      </div>
+    `;
+    // 矢印ボタン
+    const arrows=document.createElement('div'); arrows.className='doc-card-arrows';
+    const upBtn=document.createElement('button'); upBtn.className='doc-arrow-btn'; upBtn.textContent='↑';
+    upBtn.onclick=e=>{ e.stopPropagation(); moveDoc(idx,-1); };
+    const dnBtn=document.createElement('button'); dnBtn.className='doc-arrow-btn'; dnBtn.textContent='↓';
+    dnBtn.onclick=e=>{ e.stopPropagation(); moveDoc(idx,1); };
+    arrows.appendChild(upBtn); arrows.appendChild(dnBtn);
+    div2.appendChild(arrows);
+    div.appendChild(div2);
+    div.onclick=()=>openDocDetail(doc.id);
+    container.appendChild(div);
+  });
+}
+
+function moveDoc(idx,dir){
+  const newIdx=idx+dir;
+  if(newIdx<0||newIdx>=db.docs.length) return;
+  const tmp=db.docs[idx]; db.docs[idx]=db.docs[newIdx]; db.docs[newIdx]=tmp;
+  saveDB(); renderDocs();
+}
+
+function updateHeaderBadge(){
+  const mailAlerts=(db.mails||[]).filter(m=>{
+    if(!m.kanshi||!m.kanshiDate||m.date||m.kanryo) return false;
+    return new Date(m.kanshiDate)<new Date();
+  }).length;
+  const docAlerts=(db.docs||[]).filter(d=>['expired','week','month'].includes(getDocStatus(d))).length;
+  const total=mailAlerts+docAlerts;
+  const badge=document.getElementById('header-badge');
+  if(total>0){ badge.textContent='⚠️ '+total+'件'; badge.style.display='inline-block'; }
+  else badge.style.display='none';
+}
+
+// ===== 詳細画面 =====
+function openDocDetail(id){
+  const doc=(db.docs||[]).find(d=>d.id===id); if(!doc) return;
+  document.getElementById('doc-detail-title').textContent=doc.name;
+  document.getElementById('screen-doc-detail').dataset.docId=id;
+  const [badgeTxt,badgeCls]=docStatusBadge(doc);
+  let html='';
+  // 書類名下のボタン行
+  html+=`<div class="btn-row" style="margin-bottom:1rem;">
+    <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-doc-detail')">← 戻る</button>
+    <button class="btn btn-primary btn-sm" onclick="openDocEditFromDetail('${id}')">編集</button>
+    <button class="btn btn-danger btn-sm" onclick="deleteDocFromDetail('${id}')">削除</button>
+  </div>`;
+  // 基本情報
+  html+=`<div class="detail-section"><div class="detail-section-title">📄 基本情報</div>`;
+  html+=`<div class="detail-row"><span class="detail-label">カテゴリ</span><span class="detail-val">${doc.cat||''}</span></div>`;
+  if(doc.issue) html+=`<div class="detail-row"><span class="detail-label">発行日</span><span class="detail-val">${doc.issue}</span></div>`;
+  html+=`<div class="detail-row"><span class="detail-label">有効期限</span><span class="detail-val"><span class="sbadge ${badgeCls}">${badgeTxt}</span>${doc.expiry&&!doc.noExpiry?' '+doc.expiry:''}</span></div>`;
+  html+=`</div>`;
+  // 番号ID
+  if(doc.numbers&&doc.numbers.length>0){
+    html+=`<div class="detail-section"><div class="detail-section-title">🔢 番号・ID</div>`;
+    doc.numbers.forEach(n=>{ html+=`<div class="detail-num-item"><span style="color:var(--text2);">${n.label}</span><span style="font-family:monospace;font-weight:500;">${n.value}</span></div>`; });
+    html+=`</div>`;
+  }
+  // パスワード
+  if(doc.passwords&&doc.passwords.length>0){
+    html+=`<div class="detail-section"><div class="detail-section-title">🔐 パスワード・暗証番号</div>`;
+    doc.passwords.forEach((pw,i)=>{
+      html+=`<div class="detail-pw-item">
+        <div class="detail-pw-top">
+          <span class="detail-pw-name">${pw.name||'パスワード'}</span>
+          <span class="detail-pw-type">${pw.type||''}</span>
+        </div>
+        <div class="detail-pw-val">
+          <span class="detail-pw-masked" id="dpw-val-${i}">●●●●●●●●</span>
+          <div class="detail-pw-eye" id="dpw-eye-${i}" data-pw="${pw.value||''}" data-idx="${i}">👁️</div>
+        </div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+  // 契約情報
+  if(doc.contractor||doc.contractAddr||doc.contractContent||doc.contactName){
+    html+=`<div class="detail-section"><div class="detail-section-title">📝 契約情報</div>`;
+    if(doc.contractor) html+=`<div class="detail-row"><span class="detail-label">契約者名</span><span class="detail-val">${doc.contractor}</span></div>`;
+    if(doc.contractAddr) html+=`<div class="detail-row"><span class="detail-label">住所</span><span class="detail-val">${doc.contractAddr}</span></div>`;
+    if(doc.contractContent) html+=`<div class="detail-row"><span class="detail-label">契約内容</span><span class="detail-val">${doc.contractContent}</span></div>`;
+    if(doc.contactName) html+=`<div class="detail-row"><span class="detail-label">担当者</span><span class="detail-val">${doc.contactName}</span></div>`;
+    if(doc.contactTel) html+=`<div class="detail-row"><span class="detail-label">電話</span><span class="detail-val"><a href="tel:${doc.contactTel}" style="color:var(--accent2);">${doc.contactTel}</a></span></div>`;
+    if(doc.contactEmail) html+=`<div class="detail-row"><span class="detail-label">メール</span><span class="detail-val"><a href="mailto:${doc.contactEmail}" style="color:var(--accent2);">${doc.contactEmail}</a></span></div>`;
+    html+=`</div>`;
+  }
+  // 保管・ファイル
+  if(doc.location||doc.filename||doc.memo){
+    html+=`<div class="detail-section"><div class="detail-section-title">📦 保管・ファイル情報</div>`;
+    if(doc.location) html+=`<div class="detail-row"><span class="detail-label">保管場所</span><span class="detail-val">${doc.location}</span></div>`;
+    if(doc.filename) html+=`<div class="detail-row"><span class="detail-label">ファイル名</span><span class="detail-val">${doc.filename}</span></div>`;
+    if(doc.memo) html+=`<div class="detail-row"><span class="detail-label">メモ</span><span class="detail-val">${doc.memo}</span></div>`;
+    html+=`</div>`;
+  }
+  // PDFリンク
+  if(doc.pdfLinks&&doc.pdfLinks.length>0){
+    html+=`<div class="detail-section"><div class="detail-section-title">📎 関連書類リンク</div>`;
+    doc.pdfLinks.forEach(l=>{ if(l.url) html+=`<div style="margin-bottom:6px;"><a href="${l.url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;background:var(--accent-light);color:var(--accent2);border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;text-decoration:none;">📎 ${l.name||'リンクを開く'}</a></div>`; });
+    html+=`</div>`;
+  }
+  // 写真
+  if(doc.photos&&doc.photos.some(p=>p)){
+    html+=`<div class="detail-section"><div class="detail-section-title">📷 写真</div><div class="img-upload-grid">`;
+    doc.photos.forEach((p,i)=>{ if(p) html+=`<div class="img-slot" style="cursor:zoom-in;" onclick="openLightbox('${p}')"><img src="${p}" style="width:100%;height:100%;object-fit:cover;"></div>`; });
+    html+=`</div></div>`;
+  }
+  // 削除ボタン
+  document.getElementById('doc-detail-content').innerHTML=html;
+  // 目玉ボタンの長押しイベント設定
+  if(doc.passwords) doc.passwords.forEach((_,i)=>{
+    const eye=document.getElementById('dpw-eye-'+i);
+    const val=document.getElementById('dpw-val-'+i);
+    if(!eye||!val) return;
+    const pw=eye.dataset.pw;
+    eye.addEventListener('mousedown',()=>{ val.textContent=pw; });
+    eye.addEventListener('touchstart',e=>{ e.preventDefault(); val.textContent=pw; });
+    eye.addEventListener('mouseup',()=>{ val.textContent='●●●●●●●●'; });
+    eye.addEventListener('mouseleave',()=>{ val.textContent='●●●●●●●●'; });
+    eye.addEventListener('touchend',()=>{ val.textContent='●●●●●●●●'; });
+  });
+  openScreen('screen-doc-detail');
+}
+
+function openDocEditFromDetail(id){
+  const docId=id||document.getElementById('screen-doc-detail').dataset.docId;
+  closeScreen('screen-doc-detail');
+  openDocEdit(docId);
+}
+function deleteDocFromDetail(id){
+  if(!confirm('この書類を削除しますか？')) return;
+  db.docs=(db.docs||[]).filter(d=>d.id!==id);
+  saveDB(); closeScreen('screen-doc-detail'); renderDocs();
+}
+
+// ===== 編集画面 =====
+let deNumCount=0, dePwCount=0, dePdfCount=0;
+
+function toggleDeExpiry(){
+  const noExp=document.getElementById('de-no-expiry').checked;
+  document.getElementById('de-expiry').disabled=noExp;
+  if(noExp) document.getElementById('de-expiry').value='';
+}
+function onDeExpiryInput(){
+  document.getElementById('de-expiry-err').style.display='none';
+}
+function toggleDeContractBlock(cat){
+  document.getElementById('de-contract-block').style.display=CONTRACT_CATS.includes(cat)?'block':'none';
+}
+
+function addDeNumberRow(label='',value=''){
+  const wrap=document.getElementById('de-numbers');
+  const id='den-'+deNumCount++;
+  const div=document.createElement('div'); div.className='nr'; div.id=id;
+  div.innerHTML=`<input type="text" placeholder="名称（例：被保険者番号）" value="${label}"><input type="text" inputmode="numeric" placeholder="番号" value="${value}" style="font-family:monospace;"><button class="btn-del-row" onclick="document.getElementById('${id}').remove()">✕</button>`;
+  wrap.appendChild(div);
+}
+function getDeNumbers(){
+  return [...document.getElementById('de-numbers').querySelectorAll('.nr')].map(r=>{
+    const ins=r.querySelectorAll('input');
+    return {label:ins[0].value.trim()||'番号',value:ins[1].value.trim()};
+  }).filter(n=>n.value);
+}
+
+function addDePasswordRow(type='',name='',value=''){
+  const wrap=document.getElementById('de-passwords');
+  const id='dpw-'+dePwCount++;
+  const div=document.createElement('div'); div.className='pw-row'; div.id=id;
+  div.innerHTML=`
+    <div class="pw-row-head">
+      <select onchange="">${PW_TYPES.map(t=>`<option value="${t}"${t===type?' selected':''}>${t}</option>`).join('')}</select>
+      <input type="text" placeholder="名称（例：ゆうちょダイレクト）" value="${name}">
+      <button class="btn-del-row" onclick="document.getElementById('${id}').remove()">✕</button>
+    </div>
+    <div class="pw-val-wrap">
+      <input type="password" placeholder="パスワード・暗証番号" value="${value}" autocomplete="off" id="${id}-val">
+      <div class="pw-eye" id="${id}-eye">👁️</div>
+    </div>
+  `;
+  // 目玉ボタン長押し
+  wrap.appendChild(div);
+  const eye=document.getElementById(id+'-eye');
+  const inp=document.getElementById(id+'-val');
+  eye.addEventListener('mousedown',()=>inp.type='text');
+  eye.addEventListener('touchstart',e=>{e.preventDefault();inp.type='text';});
+  eye.addEventListener('mouseup',()=>inp.type='password');
+  eye.addEventListener('mouseleave',()=>inp.type='password');
+  eye.addEventListener('touchend',()=>inp.type='password');
+}
+function getDePws(){
+  return [...document.getElementById('de-passwords').querySelectorAll('.pw-row')].map(r=>{
+    const sel=r.querySelector('select');
+    const ins=r.querySelectorAll('input');
+    return {type:sel?.value||'',name:ins[0]?.value.trim()||'',value:ins[1]?.value||''};
+  }).filter(p=>p.value);
+}
+
+function buildDeLocationSelect(){
+  const sel=document.getElementById('de-location');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">保管場所を選択</option>';
+  (db.locationMaster||[]).forEach(l=>{ const o=document.createElement('option'); o.value=l; o.textContent=l; if(l===cur) o.selected=true; sel.appendChild(o); });
+  const fSel=document.getElementById('de-filename');
+  const curF=fSel.value;
+  fSel.innerHTML='<option value="">ファイル名を選択</option>';
+  (db.fileMaster||[]).forEach(f=>{ const o=document.createElement('option'); o.value=f; o.textContent=f; if(f===curF) o.selected=true; fSel.appendChild(o); });
+}
+
+function openDocEdit(id){
+  const doc=id?(db.docs||[]).find(d=>d.id===id):null;
+  document.getElementById('doc-edit-title').textContent=doc?'書類を編集':'書類を追加';
+  document.getElementById('de-id').value=id||'';
+  document.getElementById('screen-doc-edit').dataset.icon=doc?.icon||'';
+  document.getElementById('de-name').value=doc?.name||'';
+  document.getElementById('de-name-err').style.display='none';
+  document.getElementById('de-category').value=doc?.cat||'介護・医療';
+  document.getElementById('de-issue').value=doc?.issue||'';
+  document.getElementById('de-expiry').value=doc?.expiry||'';
+  document.getElementById('de-expiry').disabled=!!(doc?.noExpiry);
+  document.getElementById('de-no-expiry').checked=!!(doc?.noExpiry);
+  document.getElementById('de-expiry-err').style.display='none';
+  // 番号
+  document.getElementById('de-numbers').innerHTML=''; deNumCount=0;
+  if(doc?.numbers?.length>0) doc.numbers.forEach(n=>addDeNumberRow(n.label,n.value)); else addDeNumberRow();
+  // パスワード
+  document.getElementById('de-passwords').innerHTML=''; dePwCount=0;
+  if(doc?.passwords?.length>0) doc.passwords.forEach(p=>addDePasswordRow(p.type,p.name,p.value));
+  // 契約情報
+  const cat=doc?.cat||'介護・医療';
+  toggleDeContractBlock(cat);
+  document.getElementById('de-contractor').value=doc?.contractor||'';
+  document.getElementById('de-contract-addr').value=doc?.contractAddr||'';
+  document.getElementById('de-contract-content').value=doc?.contractContent||'';
+  document.getElementById('de-contact-name').value=doc?.contactName||'';
+  document.getElementById('de-contact-tel').value=doc?.contactTel||'';
+  document.getElementById('de-contact-email').value=doc?.contactEmail||'';
+  // 保管・ファイル
+  buildDeLocationSelect();
+  const loc=doc?.location||''; const fn=doc?.filename||'';
+  document.getElementById('de-location').value=(db.locationMaster||[]).includes(loc)?loc:'';
+  document.getElementById('de-location-input').value=(db.locationMaster||[]).includes(loc)?'':loc;
+  document.getElementById('de-filename').value=(db.fileMaster||[]).includes(fn)?fn:'';
+  document.getElementById('de-filename-input').value=(db.fileMaster||[]).includes(fn)?'':fn;
+  document.getElementById('de-memo').value=doc?.memo||'';
+  // PDFリンク
+  document.getElementById('de-pdf-links').innerHTML=''; dePdfCount=0;
+  pdfRowCount=0;
+  if(doc?.pdfLinks?.length>0) doc.pdfLinks.forEach(l=>addPdfLinkRow('de-pdf-links',l.name,l.url));
+  // 写真
+  buildPhotoSlots('de-photos', doc?.photos||[]);
+  // 削除ボタン
+  document.getElementById('de-del-btn').style.display=id?'inline-block':'none';
+  openScreen('screen-doc-edit');
+}
+
+function saveDoc(){
+  const name=document.getElementById('de-name').value.trim();
+  if(!name){ document.getElementById('de-name-err').style.display='block'; return; }
+  const noExpiry=document.getElementById('de-no-expiry').checked;
+  const expiry=document.getElementById('de-expiry').value;
+  if(!noExpiry&&!expiry){ document.getElementById('de-expiry-err').style.display='block'; return; }
+  document.getElementById('de-expiry-err').style.display='none';
+  const id=document.getElementById('de-id').value||Date.now().toString();
+  const icon=document.getElementById('screen-doc-edit').dataset.icon||CAT_ICONS[document.getElementById('de-category').value]||'📄';
+  const locSel=document.getElementById('de-location').value;
+  const locInp=document.getElementById('de-location-input').value.trim();
+  const fnSel=document.getElementById('de-filename').value;
+  const fnInp=document.getElementById('de-filename-input').value.trim();
+  const rec={
+    id, name, icon,
+    cat: document.getElementById('de-category').value,
+    issue: document.getElementById('de-issue').value,
+    expiry: noExpiry?'':expiry,
+    noExpiry,
+    numbers: getDeNumbers(),
+    passwords: getDePws(),
+    contractor: document.getElementById('de-contractor').value.trim(),
+    contractAddr: document.getElementById('de-contract-addr').value.trim(),
+    contractContent: document.getElementById('de-contract-content').value.trim(),
+    contactName: document.getElementById('de-contact-name').value.trim(),
+    contactTel: document.getElementById('de-contact-tel').value.trim(),
+    contactEmail: document.getElementById('de-contact-email').value.trim(),
+    location: locSel||locInp,
+    filename: fnSel||fnInp,
+    memo: document.getElementById('de-memo').value.trim(),
+    pdfLinks: getPdfLinks('de-pdf-links'),
+    photos: getPhotos('de-photos'),
+  };
+  if(!db.docs) db.docs=[];
+  const idx=db.docs.findIndex(d=>d.id===id);
+  if(idx>=0) db.docs[idx]=rec; else db.docs.push(rec);
+  saveDB(); closeScreen('screen-doc-edit'); renderDocs();
+  // 保存後は詳細画面に遷移
+  openDocDetail(id);
+}
+
+function deleteDoc(){
+  const id=document.getElementById('de-id').value;
+  if(!id||!confirm('この書類を削除しますか？')) return;
+  db.docs=db.docs.filter(d=>d.id!==id);
+  saveDB(); closeScreen('screen-doc-edit'); renderDocs();
+}
+
+// ===== 賃借人管理 =====
+
+// タイトル生成
+function getTcTitle(tc){
+  const type=tc.type||'新規';
+  const name=tc.tenantName?tc.tenantName+'様':'';
+  const year=tc.start?new Date(tc.start).getFullYear()+'年度':'';
+  return `賃貸契約書 (${type}) ${name} ${year}`.trim();
+}
+
+// 現在の契約判定
+function getCurrentTenant(){
+  if(!db.tenants||db.tenants.length===0) return null;
+  const noStatus=db.tenants.filter(t=>!t.status);
+  if(noStatus.length===0) return null;
+  return noStatus.sort((a,b)=>(b.start||'').localeCompare(a.start||''))[0];
+}
+
+// 一覧レンダリング
+function renderTenantList(){
+  if(!db.tenants) db.tenants=[];
+  const banner=document.getElementById('tenant-alert-banner');
+  // 複数の終了ステータス未選択チェック
+  const noStatus=db.tenants.filter(t=>!t.status);
+  if(noStatus.length>1){
+    banner.innerHTML=`<div class="alert-banner warning">⚠️ 終了ステータスが未選択の契約が${noStatus.length}件あります。確認してください。</div>`;
+  } else { banner.innerHTML=''; }
+
+  const current=getCurrentTenant();
+  const currentList=document.getElementById('tenant-current-list');
+  const currentEmpty=document.getElementById('tenant-current-empty');
+  currentList.innerHTML='';
+  if(current){
+    currentEmpty.style.display='none';
+    currentList.appendChild(makeTcCard(current, true));
+  } else {
+    currentEmpty.style.display='block';
+  }
+
+  const pastList=document.getElementById('tenant-past-list');
+  const pastEmpty=document.getElementById('tenant-past-empty');
+  pastList.innerHTML='';
+  const past=db.tenants
+    .filter(t=>t.id!==(current?.id))
+    .sort((a,b)=>(b.start||'').localeCompare(a.start||''));
+  if(past.length===0){ pastEmpty.style.display='block'; }
+  else { pastEmpty.style.display='none'; past.forEach(t=>pastList.appendChild(makeTcCard(t,false))); }
+}
+
+function makeTcCard(tc, isCurrent){
+  const div=document.createElement('div');
+  div.className='tc-card'+(isCurrent?'':' past');
+  const badge=tc.status==='更新'?`<span class="tc-card-badge tc-badge-renewal">更新済</span>`:
+               tc.status==='退去'?`<span class="tc-card-badge tc-badge-leave">退去済</span>`:
+               isCurrent?`<span class="tc-card-badge tc-badge-current">現在</span>`:'';
+  const period=tc.start&&tc.end?`${tc.start} 〜 ${tc.end}`:'';
+  div.innerHTML=`<div class="tc-card-inner">
+    <div class="tc-card-top"><div class="tc-card-title">${getTcTitle(tc)}</div>${badge}</div>
+    <div class="tc-card-meta">${period}</div>
+    ${tc.rent?`<div class="tc-card-rent">¥${Number(tc.rent).toLocaleString()}/月</div>`:''}
+  </div>`;
+  div.onclick=()=>openTenantDetail(tc.id);
+  return div;
+}
+
+// 詳細画面
+function openTenantDetail(id){
+  const tc=(db.tenants||[]).find(t=>t.id===id); if(!tc) return;
+  document.getElementById('tc-detail-title').textContent=getTcTitle(tc);
+  document.getElementById('screen-tenant-detail').dataset.tcId=id;
+  let html=`<div class="btn-row" style="margin-bottom:1rem;">
+    <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-tenant-detail')">← 戻る</button>
+    <button class="btn btn-primary btn-sm" onclick="openTenantEditFromDetail('${id}')">編集</button>
+    <button class="btn btn-danger btn-sm" onclick="deleteTenantFromDetail('${id}')">削除</button>
+  </div>`;
+
+  // 契約情報
+  html+=`<div class="detail-section"><div class="detail-section-title">📋 契約情報</div>`;
+  html+=`<div class="detail-row"><span class="detail-label">契約種別</span><span class="detail-val">${tc.type||''}</span></div>`;
+  if(tc.date) html+=`<div class="detail-row"><span class="detail-label">契約日</span><span class="detail-val">${tc.date}</span></div>`;
+  html+=`<div class="detail-row"><span class="detail-label">契約開始日</span><span class="detail-val">${tc.start||''}</span></div>`;
+  html+=`<div class="detail-row"><span class="detail-label">契約終了日</span><span class="detail-val">${tc.end||''}</span></div>`;
+  if(tc.start&&tc.end) html+=`<div class="detail-row"><span class="detail-label">契約期間</span><span class="detail-val">${calcPeriodStr(tc.start,tc.end)}</span></div>`;
+  if(tc.rent) html+=`<div class="detail-row"><span class="detail-label">賃料</span><span class="detail-val">¥${Number(tc.rent).toLocaleString()}/月</span></div>`;
+  if(tc.deposit) html+=`<div class="detail-row"><span class="detail-label">敷金</span><span class="detail-val">¥${Number(tc.deposit).toLocaleString()}</span></div>`;
+  if(tc.renewalFee) html+=`<div class="detail-row"><span class="detail-label">更新料</span><span class="detail-val">¥${Number(tc.renewalFee).toLocaleString()}</span></div>`;
+  html+=`<div class="detail-row"><span class="detail-label">紛争防止条例説明書</span><span class="detail-val">${tc.disputeCheck?'✅ 受領済':'未受領'}</span></div>`;
+  if(tc.applicationUrl) html+=`<div class="detail-row"><span class="detail-label">入居申込書</span><span class="detail-val"><a href="${tc.applicationUrl}" target="_blank" rel="noopener" style="color:var(--accent2);">📎 開く</a></span></div>`;
+  html+=`</div>`;
+
+  // 不動産会社
+  if(tc.company||tc.staff){
+    html+=`<div class="detail-section"><div class="detail-section-title">🏢 仲介不動産会社</div>`;
+    if(tc.company) html+=`<div class="detail-row"><span class="detail-label">会社名</span><span class="detail-val">${tc.company}</span></div>`;
+    if(tc.license) html+=`<div class="detail-row"><span class="detail-label">免許番号</span><span class="detail-val">${tc.license}</span></div>`;
+    if(tc.rep) html+=`<div class="detail-row"><span class="detail-label">代表者</span><span class="detail-val">${tc.rep}</span></div>`;
+    if(tc.staff) html+=`<div class="detail-row"><span class="detail-label">担当者</span><span class="detail-val">${tc.staff}</span></div>`;
+    if(tc.tel) html+=`<div class="detail-row"><span class="detail-label">電話</span><span class="detail-val"><a href="tel:${tc.tel}" style="color:var(--accent2);">${tc.tel}</a></span></div>`;
+    if(tc.email) html+=`<div class="detail-row"><span class="detail-label">メール</span><span class="detail-val"><a href="mailto:${tc.email}" style="color:var(--accent2);">${tc.email}</a></span></div>`;
+    if(tc.pdfLinks&&tc.pdfLinks.length>0){
+      html+=`<div style="margin-top:8px;">`;
+      tc.pdfLinks.forEach(l=>{ if(l.url) html+=`<div style="margin-bottom:5px;"><a href="${l.url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;background:var(--accent-light);color:var(--accent2);border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600;text-decoration:none;">📎 ${l.name||'契約書'}</a></div>`; });
+      html+=`</div>`;
+    }
+    html+=`</div>`;
+  }
+
+  // 借家人情報
+  html+=`<div class="detail-section"><div class="detail-section-title">👤 借家人情報</div>`;
+  if(tc.tenantName) html+=`<div class="detail-row"><span class="detail-label">氏名</span><span class="detail-val">${tc.tenantName}</span></div>`;
+  if(tc.tenantBirth) html+=`<div class="detail-row"><span class="detail-label">生年月日</span><span class="detail-val">${tc.tenantBirth}</span></div>`;
+  if(tc.tenantCompany) html+=`<div class="detail-row"><span class="detail-label">勤務先</span><span class="detail-val">${tc.tenantCompany}${tc.tenantPosition?' / '+tc.tenantPosition:''}</span></div>`;
+  if(tc.tenantIncome) html+=`<div class="detail-row"><span class="detail-label">年収</span><span class="detail-val">${tc.tenantIncome}万円</span></div>`;
+  if(tc.tenantCorp) html+=`<div class="detail-row"><span class="detail-label">支払い法人</span><span class="detail-val">${tc.tenantCorp}</span></div>`;
+  if(tc.tenantFamily) html+=`<div class="detail-row"><span class="detail-label">家族構成</span><span class="detail-val">${tc.tenantFamily}</span></div>`;
+  if(tc.tenantEmergency) html+=`<div class="detail-row"><span class="detail-label">緊急連絡先</span><span class="detail-val">${tc.tenantEmergency}</span></div>`;
+  html+=`</div>`;
+
+  // 連帯保証人
+  if(tc.guarantorName){
+    html+=`<div class="detail-section"><div class="detail-section-title">🤝 連帯保証人</div>`;
+    html+=`<div class="detail-row"><span class="detail-label">氏名</span><span class="detail-val">${tc.guarantorName}</span></div>`;
+    if(tc.guarantorAddr) html+=`<div class="detail-row"><span class="detail-label">住所</span><span class="detail-val">${tc.guarantorAddr}</span></div>`;
+    if(tc.guarantorTel) html+=`<div class="detail-row"><span class="detail-label">電話</span><span class="detail-val"><a href="tel:${tc.guarantorTel}" style="color:var(--accent2);">${tc.guarantorTel}</a></span></div>`;
+    if(tc.guarantorCompany) html+=`<div class="detail-row"><span class="detail-label">勤務先</span><span class="detail-val">${tc.guarantorCompany}</span></div>`;
+    html+=`</div>`;
+  }
+
+  // 契約終了ステータス
+  if(tc.status){
+    html+=`<div class="detail-section"><div class="detail-section-title">🔄 契約終了ステータス：${tc.status}</div>`;
+    if(tc.status==='退去'){
+      if(tc.leaveDate) html+=`<div class="detail-row"><span class="detail-label">退去日</span><span class="detail-val">${tc.leaveDate}</span></div>`;
+      if(tc.recoveryLinks&&tc.recoveryLinks.length>0){
+        html+=`<div style="margin-top:8px;">`;
+        tc.recoveryLinks.forEach(l=>{ if(l.url) html+=`<div style="margin-bottom:5px;"><a href="${l.url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;background:var(--accent-light);color:var(--accent2);border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600;text-decoration:none;">📎 ${l.name||'原状回復書類'}</a></div>`; });
+        html+=`</div>`;
+      }
+      const deposit=Number(tc.deposit)||0;
+      const cost=Number(tc.recoveryCost)||0;
+      const refund=deposit-cost;
+      html+=`<div style="background:var(--bg3);border-radius:8px;padding:12px;margin-top:8px;">
+        <div class="detail-row"><span class="detail-label">敷金</span><span class="detail-val">¥${deposit.toLocaleString()}</span></div>
+        <div class="detail-row"><span class="detail-label">原状回復費用</span><span class="detail-val">¥${cost.toLocaleString()}</span></div>
+        <div class="detail-row" style="border-bottom:none;"><span class="detail-label" style="font-weight:700;">返還額</span><span class="detail-val" style="font-size:16px;color:${refund>=0?'var(--success)':'var(--danger)'};">¥${refund.toLocaleString()}</span></div>
+      </div>`;
+    }
+    html+=`</div>`;
+  }
+
+  document.getElementById('tc-detail-content').innerHTML=html;
+  openScreen('screen-tenant-detail');
+}
+
+function calcPeriodStr(start,end){
+  const s=new Date(start), e=new Date(end);
+  const months=(e.getFullYear()-s.getFullYear())*12+(e.getMonth()-s.getMonth());
+  const years=Math.floor(months/12); const rem=months%12;
+  return years>0?`${years}年${rem>0?rem+'ヶ月':''}`:`${rem}ヶ月`;
+}
+
+function openTenantEditFromDetail(id){
+  closeScreen('screen-tenant-detail'); openTenantEdit(id);
+}
+function deleteTenantFromDetail(id){
+  if(!confirm('この契約を削除しますか？')) return;
+  db.tenants=db.tenants.filter(t=>t.id!==id);
+  saveDB(); closeScreen('screen-tenant-detail'); renderTenantList();
+}
+
+// 編集画面
+let tcPdfCount=0, tcRecoveryCount=0;
+
+function calcTcPeriod(){
+  const s=document.getElementById('tc-start').value;
+  const e=document.getElementById('tc-end').value;
+  const disp=document.getElementById('tc-period-display');
+  if(s&&e){ try{ disp.textContent='契約期間：'+calcPeriodStr(s,e); }catch(_){ disp.textContent=''; } }
+  else disp.textContent='';
+}
+
+function calcDeposit(){
+  const deposit=Number(document.getElementById('tc-deposit').value)||0;
+  const cost=Number(document.getElementById('tc-recovery-cost').value)||0;
+  document.getElementById('tc-deposit-display').textContent='¥'+deposit.toLocaleString();
+  const refund=deposit-cost;
+  document.getElementById('tc-refund-display').textContent='¥'+refund.toLocaleString();
+  document.getElementById('tc-refund-display').style.color=refund>=0?'var(--success)':'var(--danger)';
+}
+
+function toggleTcStatus(){
+  const status=document.querySelector('input[name="tc-status"]:checked')?.value||'';
+  document.getElementById('tc-leave-block').style.display=status==='退去'?'block':'none';
+  if(status==='退去') calcDeposit();
+}
+
+function updateTcAppLink(){
+  const url=document.getElementById('tc-application-url').value.trim();
+  const btn=document.getElementById('tc-application-link');
+  if(url){ btn.href=url; btn.style.display='inline-flex'; }
+  else btn.style.display='none';
+}
+
+function openTenantEdit(id){
+  const tc=id?(db.tenants||[]).find(t=>t.id===id):null;
+  document.getElementById('tc-edit-title').textContent=tc?'契約を編集':'契約を追加';
+  document.getElementById('tc-id').value=id||'';
+  // 契約情報
+  const type=tc?.type||'新規';
+  document.getElementById(type==='更新'?'tc-type-renewal':'tc-type-new').checked=true;
+  document.getElementById('tc-date').value=tc?.date||'';
+  document.getElementById('tc-start').value=tc?.start||'';
+  document.getElementById('tc-end').value=tc?.end||'';
+  calcTcPeriod();
+  document.getElementById('tc-rent').value=tc?.rent||'';
+  document.getElementById('tc-deposit').value=tc?.deposit||'';
+  document.getElementById('tc-renewal-fee').value=tc?.renewalFee||'';
+  document.getElementById('tc-dispute-check').checked=!!(tc?.disputeCheck);
+  document.getElementById('tc-application-url').value=tc?.applicationUrl||'';
+  updateTcAppLink();
+  // エラー非表示
+  document.getElementById('tc-start-err').style.display='none';
+  document.getElementById('tc-end-err').style.display='none';
+  // 不動産会社
+  document.getElementById('tc-company').value=tc?.company||'';
+  document.getElementById('tc-license').value=tc?.license||'';
+  document.getElementById('tc-rep').value=tc?.rep||'';
+  document.getElementById('tc-staff').value=tc?.staff||'';
+  document.getElementById('tc-tel').value=tc?.tel||'';
+  document.getElementById('tc-email').value=tc?.email||'';
+  document.getElementById('tc-pdf-links').innerHTML=''; tcPdfCount=0; pdfRowCount=0;
+  if(tc?.pdfLinks?.length>0) tc.pdfLinks.forEach(l=>addPdfLinkRow('tc-pdf-links',l.name,l.url));
+  // 借家人情報
+  document.getElementById('tc-tenant-name').value=tc?.tenantName||'';
+  document.getElementById('tc-tenant-birth').value=tc?.tenantBirth||'';
+  document.getElementById('tc-tenant-company').value=tc?.tenantCompany||'';
+  document.getElementById('tc-tenant-position').value=tc?.tenantPosition||'';
+  document.getElementById('tc-tenant-income').value=tc?.tenantIncome||'';
+  document.getElementById('tc-tenant-corp').value=tc?.tenantCorp||'';
+  document.getElementById('tc-tenant-family').value=tc?.tenantFamily||'';
+  document.getElementById('tc-tenant-emergency').value=tc?.tenantEmergency||'';
+  // 連帯保証人
+  document.getElementById('tc-guarantor-name').value=tc?.guarantorName||'';
+  document.getElementById('tc-guarantor-addr').value=tc?.guarantorAddr||'';
+  document.getElementById('tc-guarantor-tel').value=tc?.guarantorTel||'';
+  document.getElementById('tc-guarantor-company').value=tc?.guarantorCompany||'';
+  // ステータス
+  const status=tc?.status||'';
+  document.querySelectorAll('input[name="tc-status"]').forEach(r=>r.checked=r.value===status);
+  document.getElementById('tc-leave-block').style.display=status==='退去'?'block':'none';
+  document.getElementById('tc-leave-date').value=tc?.leaveDate||'';
+  document.getElementById('tc-recovery-links').innerHTML=''; pdfRowCount=0;
+  if(tc?.recoveryLinks?.length>0) tc.recoveryLinks.forEach(l=>addPdfLinkRow('tc-recovery-links',l.name,l.url));
+  document.getElementById('tc-recovery-cost').value=tc?.recoveryCost||'';
+  if(status==='退去') calcDeposit();
+  document.getElementById('tc-del-btn').style.display=id?'inline-block':'none';
+  openScreen('screen-tenant-edit');
+}
+
+function saveTenant(){
+  const start=document.getElementById('tc-start').value;
+  const end=document.getElementById('tc-end').value;
+  let valid=true;
+  if(!start){ document.getElementById('tc-start-err').style.display='block'; valid=false; }
+  if(!end){ document.getElementById('tc-end-err').style.display='block'; valid=false; }
+  if(!valid) return;
+  const id=document.getElementById('tc-id').value||Date.now().toString();
+  const status=document.querySelector('input[name="tc-status"]:checked')?.value||'';
+  const deposit=Number(document.getElementById('tc-deposit').value)||0;
+  const cost=Number(document.getElementById('tc-recovery-cost').value)||0;
+  const rec={
+    id,
+    type: document.querySelector('input[name="tc-type"]:checked')?.value||'新規',
+    date: document.getElementById('tc-date').value,
+    start, end,
+    rent: document.getElementById('tc-rent').value,
+    deposit: document.getElementById('tc-deposit').value,
+    renewalFee: document.getElementById('tc-renewal-fee').value,
+    disputeCheck: document.getElementById('tc-dispute-check').checked,
+    applicationUrl: document.getElementById('tc-application-url').value.trim(),
+    company: document.getElementById('tc-company').value.trim(),
+    license: document.getElementById('tc-license').value.trim(),
+    rep: document.getElementById('tc-rep').value.trim(),
+    staff: document.getElementById('tc-staff').value.trim(),
+    tel: document.getElementById('tc-tel').value.trim(),
+    email: document.getElementById('tc-email').value.trim(),
+    pdfLinks: getPdfLinks('tc-pdf-links'),
+    tenantName: document.getElementById('tc-tenant-name').value.trim(),
+    tenantBirth: document.getElementById('tc-tenant-birth').value,
+    tenantCompany: document.getElementById('tc-tenant-company').value.trim(),
+    tenantPosition: document.getElementById('tc-tenant-position').value.trim(),
+    tenantIncome: document.getElementById('tc-tenant-income').value,
+    tenantCorp: document.getElementById('tc-tenant-corp').value.trim(),
+    tenantFamily: document.getElementById('tc-tenant-family').value.trim(),
+    tenantEmergency: document.getElementById('tc-tenant-emergency').value.trim(),
+    guarantorName: document.getElementById('tc-guarantor-name').value.trim(),
+    guarantorAddr: document.getElementById('tc-guarantor-addr').value.trim(),
+    guarantorTel: document.getElementById('tc-guarantor-tel').value.trim(),
+    guarantorCompany: document.getElementById('tc-guarantor-company').value.trim(),
+    status,
+    leaveDate: document.getElementById('tc-leave-date').value,
+    recoveryLinks: getPdfLinks('tc-recovery-links'),
+    recoveryCost: cost,
+    refund: deposit-cost,
+  };
+  // 更新選択時は新レコードを自動作成
+  if(status==='更新' && !document.getElementById('tc-id').value){
+    // 既存IDの場合は更新のみ
+  }
+  if(!db.tenants) db.tenants=[];
+  const idx=db.tenants.findIndex(t=>t.id===id);
+  if(idx>=0) db.tenants[idx]=rec; else db.tenants.push(rec);
+  // 更新選択時は新しい契約を自動作成してそちらに遷移
+  if(status==='更新'){
+    const newId=Date.now().toString()+'_r';
+    const newRec={...rec, id:newId, type:'更新', date:'', start:'', end:'', status:'', leaveDate:'', recoveryLinks:[], recoveryCost:0, refund:0, pdfLinks:[], applicationUrl:'', disputeCheck:false};
+    db.tenants.push(newRec);
+    saveDB(); closeScreen('screen-tenant-edit'); renderTenantList();
+    openTenantEdit(newId);
+    return;
+  }
+  saveDB(); closeScreen('screen-tenant-edit'); renderTenantList();
+  openTenantDetail(id);
+}
+
+function deleteTenant(){
+  const id=document.getElementById('tc-id').value;
+  if(!id||!confirm('この契約を削除しますか？')) return;
+  db.tenants=db.tenants.filter(t=>t.id!==id);
+  saveDB(); closeScreen('screen-tenant-edit'); renderTenantList();
+}
+
+// ===== 貸家情報 =====
+let thKeyCount=0;
+function openTenantHouse(){
+  const h=db.tenantHouse||{};
+  document.getElementById('th-addr').value=h.addr||'';
+  document.getElementById('th-area').value=h.area||'';
+  document.getElementById('th-facilities').value=h.facilities||'';
+  document.getElementById('th-parking').value=h.parking||'';
+  document.getElementById('th-comment').value=h.comment||'';
+  // 間取り写真
+  thSetSlot('th-madori-slot', h.madori||'', 'th-madori-input');
+  thSetSlot('th-gaikan-slot', h.gaikan||'', 'th-gaikan-input');
+  // 鍵情報
+  document.getElementById('th-keys').innerHTML=''; thKeyCount=0;
+  if(h.keys&&h.keys.length>0) h.keys.forEach(k=>addThKeyRow(k.type,k.date,k.owner,k.ownerOther));
+  openScreen('screen-tenant-house');
+}
+
+function thSetSlot(slotId, src, inputId){
+  const slot=document.getElementById(slotId); slot.innerHTML='';
+  if(src){
+    const img=document.createElement('img'); img.src=src; img.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:9px;cursor:zoom-in;';
+    img.onclick=e=>{ e.stopPropagation(); openLightbox(src); };
+    const del=document.createElement('button'); del.className='img-del'; del.textContent='✕'; del.style.display='flex';
+    del.onclick=e=>{ e.stopPropagation(); thSetSlot(slotId,'',inputId); };
+    slot.appendChild(img); slot.appendChild(del);
+    slot.dataset.img=src; slot.onclick=null;
+  } else {
+    slot.innerHTML=`<div class="img-icon">📷</div><div class="img-label">${slotId.includes('madori')?'間取り':'外観'}</div>`;
+    slot.dataset.img=''; slot.onclick=()=>document.getElementById(inputId).click();
+  }
+}
+
+function thPhotoSelect(input, slotId){
+  const file=input.files[0]; if(!file) return;
+  const inputId=input.id;
+  compressImage(file).then(src=>{ thSetSlot(slotId,src,inputId); input.value=''; });
+}
+
+function addThKeyRow(type='',date='',owner='大家',ownerOther=''){
+  const wrap=document.getElementById('th-keys');
+  const id='thk-'+thKeyCount++;
+  const div=document.createElement('div'); div.className='pw-row'; div.id=id;
+  div.innerHTML=`
+    <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;">
+      <input type="text" placeholder="鍵の種類（例：玄関）" value="${type}" style="padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;width:100%;">
+      <input type="date" value="${date}" style="padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;width:100%;">
+      <button class="btn-del-row" onclick="document.getElementById('${id}').remove()">✕</button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="radio" name="owner-${id}" value="大家" ${owner==='大家'?'checked':''}> 大家</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="radio" name="owner-${id}" value="不動産会社" ${owner==='不動産会社'?'checked':''}> 不動産会社</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="radio" name="owner-${id}" value="賃借人" ${owner==='賃借人'?'checked':''}> 賃借人</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="radio" name="owner-${id}" value="その他" ${owner==='その他'?'checked':''}> その他</label>
+      <input type="text" placeholder="その他の場合" value="${ownerOther}" style="flex:1;min-width:80px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:#fff;">
+    </div>
+  `;
+  wrap.appendChild(div);
+}
+
+function getThKeys(){
+  return [...document.getElementById('th-keys').querySelectorAll('.pw-row')].map(r=>{
+    const ins=r.querySelectorAll('input[type=text],input[type=date]');
+    const ownerChecked=r.querySelector('input[type=radio]:checked');
+    return { type:ins[0]?.value.trim()||'', date:ins[1]?.value||'', owner:ownerChecked?.value||'大家', ownerOther:ins[2]?.value.trim()||'' };
+  });
+}
+
+function saveTenantHouse(){
+  db.tenantHouse={
+    addr: document.getElementById('th-addr').value.trim(),
+    area: document.getElementById('th-area').value.trim(),
+    facilities: document.getElementById('th-facilities').value.trim(),
+    parking: document.getElementById('th-parking').value.trim(),
+    comment: document.getElementById('th-comment').value.trim(),
+    madori: document.getElementById('th-madori-slot').dataset.img||'',
+    gaikan: document.getElementById('th-gaikan-slot').dataset.img||'',
+    keys: getThKeys(),
+  };
+  saveDB(); closeScreen('screen-tenant-house');
+  alert('✓ 貸家情報を保存しました');
+}
+
+function showAlertDetail(){
+  const popup=document.getElementById('alert-popup');
+  const content=document.getElementById('alert-popup-content');
+  const items=[];
+  const today=new Date(); today.setHours(0,0,0,0);
+
+  // 郵便物の到着遅延
+  (db.mails||[]).forEach(m=>{
+    if(m.kanshi&&m.kanshiDate&&!m.date&&!m.kanryo){
+      if(new Date(m.kanshiDate)<today)
+        items.push(`📮 到着遅延：${m.title}（予定：${m.kanshiDate}）`);
+    }
+  });
+
+  // 重要書類の有効期限
+  (db.docs||[]).forEach(d=>{
+    const s=getDocStatus(d);
+    if(s==='expired') items.push(`📄 期限切れ：${d.name}`);
+    else if(s==='week') items.push(`📄 期限まであと${getDocDays(d)}日：${d.name}`);
+    else if(s==='month') items.push(`📄 期限まであと${getDocDays(d)}日：${d.name}`);
+  });
+
+  // 確定申告アラート
+  const m=today.getMonth()+1;
+  const y=today.getFullYear();
+  const taxYear=y-1;
+  const status=getTaxStatus(taxYear);
+  const personal=getTaxPersonal(taxYear);
+  const isSubmitted=!!(status.submitDate);
+  const mn=(db.docs||[]).find(d=>d.name&&d.name.includes('マイナンバー'));
+  if(mn&&mn.expiry&&!mn.noExpiry){
+    const days=Math.floor((new Date(mn.expiry)-today)/86400000);
+    if(days<=60) items.push(`🪪 マイナンバー有効期限まであと${days}日`);
+  }
+  if(!isSubmitted&&(m===12||m<=3)){
+    if(!personal.pension) items.push(`🧾 ${taxYear}年分：本人年金収入が未入力`);
+    if(!personal.care&&!personal.medical) items.push(`🧾 ${taxYear}年分：社会保険料が未入力`);
+    if(!personal.insurance) items.push(`🧾 ${taxYear}年分：損害保険料が未入力`);
+  }
+
+  if(items.length===0){
+    content.innerHTML='アラートはありません';
+  } else {
+    content.innerHTML=items.map(i=>`<div style="padding:4px 0;border-bottom:1px solid var(--bg3);">${i}</div>`).join('');
+  }
+  popup.style.display='block';
+  // 画面外タップで閉じる
+  setTimeout(()=>{
+    const close=e=>{ if(!popup.contains(e.target)){popup.style.display='none';document.removeEventListener('click',close);} };
+    document.addEventListener('click',close);
+  },100);
+}
+
+// ===== 確定申告 =====
+let currentTaxYear = new Date().getFullYear();
+
+function changeTaxYear(d){
+  const minYear=new Date().getFullYear()-3;
+  const maxYear=new Date().getFullYear();
+  currentTaxYear=Math.max(minYear,Math.min(maxYear,currentTaxYear+d));
+  renderTax();
+}
+
+function getTaxYear(y){ return db.taxData[y]||{}; }
+function getTaxMonth(y,m){ return (db.taxData[y]?.months||{})[String(m)]||{}; }
+function getTaxPersonal(y){ return db.taxData[y]?.personal||{}; }
+function getTaxStatus(y){ return db.taxData[y]?.status||{}; }
+
+// アラートチェック
+function checkTaxAlerts(){
+  const today=new Date();
+  const m=today.getMonth()+1;
+  const y=today.getFullYear();
+  const alerts=[];
+
+  // マイナンバー有効期限2ヶ月前
+  const mynumber=(db.docs||[]).find(d=>d.name&&d.name.includes('マイナンバー'));
+  if(mynumber&&mynumber.expiry&&!mynumber.noExpiry){
+    const days=Math.floor((new Date(mynumber.expiry)-today)/86400000);
+    if(days<=60) alerts.push(`⚠️ マイナンバーカードの有効期限まであと${days}日です`);
+  }
+
+  // 申告年度（前年）のデータをチェック
+  const taxYear=y-1; // 申告対象年度は前年
+  const status=getTaxStatus(taxYear);
+  const personal=getTaxPersonal(taxYear);
+  const isSubmitted=!!(status.submitDate);
+
+  if(!isSubmitted){
+    // 12月〜翌3月にアラート
+    if(m===12||m<=3){
+      if(!personal.pension) alerts.push(`⚠️ ${taxYear}年分：本人年金収入が未入力です`);
+      if(!personal.care&&!personal.medical) alerts.push(`⚠️ ${taxYear}年分：社会保険料が未入力です`);
+      if(!personal.insurance) alerts.push(`⚠️ ${taxYear}年分：損害保険料が未入力です`);
+    }
+  }
+
+  const banner=document.getElementById('tax-alert-banner');
+  if(alerts.length>0){
+    banner.innerHTML=`<div class="alert-banner danger">${alerts.join('<br>')}</div>`;
+  } else { banner.innerHTML=''; }
+  return alerts.length;
+}
+
+// ヘッダーバッジ更新（全アラート合算）
+function updateHeaderBadge(){
+  const mailAlerts=(db.mails||[]).filter(m=>{
+    if(!m.kanshi||!m.kanshiDate||m.date||m.kanryo) return false;
+    return new Date(m.kanshiDate)<new Date();
+  }).length;
+  const docAlerts=(db.docs||[]).filter(d=>['expired','week','month'].includes(getDocStatus(d))).length;
+  const taxAlerts=checkTaxAlerts();
+  const total=mailAlerts+docAlerts+taxAlerts;
+  const badge=document.getElementById('header-badge');
+  if(total>0){ badge.textContent='⚠️ '+total+'件'; badge.style.display='inline-block'; }
+  else badge.style.display='none';
+}
+
+// メイン描画
+function renderTax(){
+  document.getElementById('tax-yr-label').textContent=currentTaxYear+'年度';
+  renderTaxHeaderInfo();
+  renderTaxStatus();
+  renderTaxTable();
+  renderTaxPersonal();
+}
+
+// マイナンバー・年金番号
+function renderTaxHeaderInfo(){
+  const wrap=document.getElementById('tax-header-info');
+  const mn=(db.docs||[]).find(d=>d.name&&d.name.includes('マイナンバー'));
+  const yn=(db.docs||[]).find(d=>d.name&&(d.name.includes('年金')));
+  let html='<div class="detail-section-title" style="font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:8px;">🪪 番号情報</div>';
+  if(mn){
+    const nums=(mn.numbers||[]);
+    const mnNum=nums.length>0?nums[0].value:'未登録';
+    html+=`<div class="tax-personal-row"><span class="tax-personal-label">マイナンバー</span><span class="tax-personal-val" style="font-family:monospace;">${mnNum}</span></div>`;
+    if(mn.expiry) html+=`<div class="tax-personal-row"><span class="tax-personal-label">マイナンバー有効期限</span><span class="tax-personal-val">${mn.expiry}</span></div>`;
+  } else {
+    html+=`<div style="font-size:13px;color:var(--text3);">マイナンバーカードが重要書類に未登録です</div>`;
+  }
+  if(yn){
+    const nums=(yn.numbers||[]);
+    const ynNum=nums.length>0?nums[0].value:'未登録';
+    html+=`<div class="tax-personal-row"><span class="tax-personal-label">年金番号</span><span class="tax-personal-val" style="font-family:monospace;">${ynNum}</span></div>`;
+  }
+  wrap.innerHTML=html;
+}
+
+// 申告ステータス
+function renderTaxStatus(){
+  const wrap=document.getElementById('tax-status-display');
+  const s=getTaxStatus(currentTaxYear);
+  const isSubmitted=!!(s.submitDate);
+  let html='';
+  if(isSubmitted){
+    html+=`<div class="tax-status-done">✅ 確定申告完了（${s.submitDate}）${s.type?'　'+s.type:''}</div>`;
+    if(s.taxAmount!==undefined&&s.taxAmount!==''){
+      const amt=Number(s.taxAmount);
+      const label=amt>0?'納税額':amt<0?'還付額':'無税';
+      const color=amt>0?'var(--danger)':amt<0?'var(--success)':'var(--text2)';
+      html+=`<div style="margin-top:8px;padding:10px;background:var(--bg3);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:13px;font-weight:600;">${label}</span>
+        <span style="font-size:16px;font-weight:700;color:${color};">${amt===0?'無税':'¥'+Math.abs(amt).toLocaleString()}</span>
+      </div>`;
+    }
+  } else {
+    html+=`<div class="tax-status-pending">`;
+    html+=`${s.type||'白色申告'}`;
+    if(s.periodStart&&s.periodEnd) html+=`　提出期間：${s.periodStart}〜${s.periodEnd}`;
+    html+=`</div>`;
+  }
+  if(s.memo) html+=`<div class="memo-box" style="margin-top:8px;">📝 ${s.memo}</div>`;
+  if(s.pdfLinks&&s.pdfLinks.length>0){
+    html+=`<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">`;
+    s.pdfLinks.forEach(l=>{ if(l.url) html+=`<a href="${l.url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;background:var(--accent-light);color:var(--accent2);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;text-decoration:none;">📎 ${l.name||'書類'}</a>`; });
+    html+=`</div>`;
+  }
+  html+=`<button class="btn btn-secondary btn-sm" style="margin-top:10px;" onclick="openTaxStatus()">✏️ 編集</button>`;
+  wrap.innerHTML=html;
+}
+
+// 収支表
+function renderTaxTable(){
+  const table=document.getElementById('tax-table');
+  let totalRent=0,totalLand=0,totalMgmt=0,totalRepair=0,totalOther=0;
+  for(let m=1;m<=12;m++){
+    const d=getTaxMonth(currentTaxYear,m);
+    totalRent+=Number(d.rent)||0; totalLand+=Number(d.land)||0;
+    totalMgmt+=Number(d.mgmt)||0; totalRepair+=Number(d.repair)||0;
+    totalOther+=Number(d.other)||0;
+  }
+  const totalIncome=totalRent+totalLand;
+  const totalExp=totalMgmt+totalRepair+totalOther;
+  const totalNet=totalIncome-totalExp;
+
+  document.getElementById('tax-income-summary').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+      <div style="background:var(--success-light);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:11px;color:var(--success);margin-bottom:3px;">年間収入</div>
+        <div style="font-size:14px;font-weight:700;color:var(--success);">¥${totalIncome.toLocaleString()}</div>
+      </div>
+      <div style="background:var(--danger-light);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:11px;color:var(--danger);margin-bottom:3px;">年間支出</div>
+        <div style="font-size:14px;font-weight:700;color:var(--danger);">¥${totalExp.toLocaleString()}</div>
+      </div>
+      <div style="background:var(--accent-light);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:11px;color:var(--accent2);margin-bottom:3px;">差引</div>
+        <div style="font-size:14px;font-weight:700;color:var(--accent2);">¥${totalNet.toLocaleString()}</div>
+      </div>
+    </div>
+  `;
+
+  let html=`<thead><tr>
+    <th>月</th><th>家賃収入</th><th>地代</th><th>管理費</th><th>修繕費</th><th>その他</th><th>差引</th><th>📎</th>
+  </tr></thead><tbody>`;
+  html+=`<tr class="total-row">
+    <td>合計</td>
+    <td>¥${totalRent.toLocaleString()}</td><td>¥${totalLand.toLocaleString()}</td>
+    <td>¥${totalMgmt.toLocaleString()}</td><td>¥${totalRepair.toLocaleString()}</td>
+    <td>¥${totalOther.toLocaleString()}</td>
+    <td style="color:${totalNet>=0?'var(--success)':'var(--danger)'};">¥${totalNet.toLocaleString()}</td>
+    <td></td>
+  </tr>`;
+  for(let m=1;m<=12;m++){
+    const d=getTaxMonth(currentTaxYear,m);
+    const net=(Number(d.rent)||0)+(Number(d.land)||0)-(Number(d.mgmt)||0)-(Number(d.repair)||0)-(Number(d.other)||0);
+    const hasPdf=d.pdfLinks&&d.pdfLinks.length>0;
+    const hasData=d.rent||d.land||d.mgmt||d.repair||d.other;
+    html+=`<tr>
+      <td>${m}月</td>
+      <td class="cell-link" onclick="openTaxMonth(${m})">${d.rent?'¥'+Number(d.rent).toLocaleString():'-'}</td>
+      <td class="cell-link" onclick="openTaxMonth(${m})">${d.land?'¥'+Number(d.land).toLocaleString():'-'}</td>
+      <td class="cell-link" onclick="openTaxMonth(${m})">${d.mgmt?'¥'+Number(d.mgmt).toLocaleString():'-'}</td>
+      <td class="cell-link" onclick="openTaxMonth(${m})">${d.repair?'¥'+Number(d.repair).toLocaleString():'-'}</td>
+      <td class="cell-link" onclick="openTaxMonth(${m})">${d.other?'¥'+Number(d.other).toLocaleString():'-'}</td>
+      <td style="color:${net>=0?'var(--success)':'var(--danger)'};">${hasData?'¥'+net.toLocaleString():'-'}</td>
+      <td>${hasPdf?`<span style="color:var(--accent2);cursor:pointer;" onclick="openTaxMonth(${m})">📎${d.pdfLinks.length}</span>`:''}</td>
+    </tr>`;
+  }
+  html+=`</tbody>`;
+  table.innerHTML=html;
+}
+
+// 個人収支
+function renderTaxPersonal(){
+  const p=getTaxPersonal(currentTaxYear);
+  const care=Number(p.care)||0;
+  const medical=Number(p.medical)||0;
+  const social=care+medical;
+  const wrap=document.getElementById('tax-personal');
+  let html=`
+    <div class="tax-personal-row"><span class="tax-personal-label">本人年金（老齢基礎）</span><span class="tax-personal-val">${p.pension?'¥'+Number(p.pension).toLocaleString():'未入力'}</span></div>
+    <div class="tax-personal-row"><span class="tax-personal-label">介護保険料額</span><span class="tax-personal-val">${p.care?'¥'+Number(p.care).toLocaleString():'未入力'}</span></div>
+    <div class="tax-personal-row"><span class="tax-personal-label">後期高齢者医療保険料額</span><span class="tax-personal-val">${p.medical?'¥'+Number(p.medical).toLocaleString():'未入力'}</span></div>
+    <div class="tax-personal-row" style="background:var(--accent-light);margin:4px -4px;padding:8px 4px;border-radius:6px;"><span class="tax-personal-label" style="font-weight:700;color:var(--accent2);">社会保険料の額（合計）</span><span class="tax-personal-val" style="color:var(--accent2);">¥${social.toLocaleString()}</span></div>
+    <div class="tax-personal-row"><span class="tax-personal-label">医療費（年間）</span><span class="tax-personal-val">${p.medicalFee?'¥'+Number(p.medicalFee).toLocaleString():'未入力'}</span></div>
+    <div class="tax-personal-row"><span class="tax-personal-label">損害保険料</span><span class="tax-personal-val">${p.insurance?'¥'+Number(p.insurance).toLocaleString():'未入力'}</span></div>
+    <button class="btn btn-secondary btn-sm" style="margin-top:10px;" onclick="openTaxPersonal()">✏️ 編集</button>
+  `;
+  wrap.innerHTML=html;
+}
+
+// 月次入力画面
+function openTaxMonth(m){
+  const d=getTaxMonth(currentTaxYear,m);
+  document.getElementById('tax-month-title').textContent=`${currentTaxYear}年 ${m}月 収支入力`;
+  document.getElementById('tm-year').value=currentTaxYear;
+  document.getElementById('tm-month').value=m;
+  document.getElementById('tm-rent').value=d.rent||'';
+  document.getElementById('tm-land').value=d.land||'';
+  document.getElementById('tm-mgmt').value=d.mgmt||'';
+  document.getElementById('tm-repair').value=d.repair||'';
+  document.getElementById('tm-other').value=d.other||'';
+  document.getElementById('tm-report-date').value=d.reportDate||'';
+  document.getElementById('tm-memo').value=d.memo||'';
+  document.getElementById('tm-pdf-links').innerHTML=''; pdfRowCount=0;
+  if(d.pdfLinks?.length>0) d.pdfLinks.forEach(l=>addPdfLinkRow('tm-pdf-links',l.name,l.url));
+  openScreen('screen-tax-month');
+}
+
+function saveTaxMonth(){
+  const y=document.getElementById('tm-year').value;
+  const m=document.getElementById('tm-month').value;
+  if(!db.taxData[y]) db.taxData[y]={};
+  if(!db.taxData[y].months) db.taxData[y].months={};
+  db.taxData[y].months[m]={
+    rent: document.getElementById('tm-rent').value,
+    land: document.getElementById('tm-land').value,
+    mgmt: document.getElementById('tm-mgmt').value,
+    repair: document.getElementById('tm-repair').value,
+    other: document.getElementById('tm-other').value,
+    reportDate: document.getElementById('tm-report-date').value,
+    memo: document.getElementById('tm-memo').value,
+    pdfLinks: getPdfLinks('tm-pdf-links'),
+  };
+  saveDB(); closeScreen('screen-tax-month'); renderTax();
+}
+
+// 申告ステータス編集
+function openTaxStatus(){
+  const s=getTaxStatus(currentTaxYear);
+  document.getElementById('tax-status-title').textContent=currentTaxYear+'年度 申告ステータス';
+  document.getElementById('ts-year').value=currentTaxYear;
+  const type=s.type||'白色申告';
+  document.getElementById(type==='青色申告'?'ts-type-blue':'ts-type-white').checked=true;
+  document.getElementById('ts-period-start').value=s.periodStart||'';
+  document.getElementById('ts-period-end').value=s.periodEnd||'';
+  document.getElementById('ts-submit-date').value=s.submitDate||'';
+  document.getElementById('ts-tax-amount').value=s.taxAmount!==undefined?s.taxAmount:'';
+  document.getElementById('ts-memo').value=s.memo||'';
+  document.getElementById('ts-pdf-links').innerHTML=''; pdfRowCount=0;
+  if(s.pdfLinks?.length>0) s.pdfLinks.forEach(l=>addPdfLinkRow('ts-pdf-links',l.name,l.url));
+  openScreen('screen-tax-status');
+}
+
+function saveTaxStatus(){
+  const y=document.getElementById('ts-year').value;
+  if(!db.taxData[y]) db.taxData[y]={};
+  db.taxData[y].status={
+    type: document.querySelector('input[name="ts-type"]:checked')?.value||'白色申告',
+    periodStart: document.getElementById('ts-period-start').value,
+    periodEnd: document.getElementById('ts-period-end').value,
+    submitDate: document.getElementById('ts-submit-date').value,
+    taxAmount: document.getElementById('ts-tax-amount').value,
+    memo: document.getElementById('ts-memo').value,
+    pdfLinks: getPdfLinks('ts-pdf-links'),
+  };
+  saveDB(); closeScreen('screen-tax-status'); renderTax(); updateHeaderBadge();
+}
+
+// 個人収支編集
+function openTaxPersonal(){
+  const p=getTaxPersonal(currentTaxYear);
+  document.getElementById('tax-personal-title').textContent=currentTaxYear+'年度 個人収支';
+  document.getElementById('tp-year').value=currentTaxYear;
+  document.getElementById('tp-pension').value=p.pension||'';
+  document.getElementById('tp-care').value=p.care||'';
+  document.getElementById('tp-medical').value=p.medical||'';
+  document.getElementById('tp-medical-fee').value=p.medicalFee||'';
+  document.getElementById('tp-insurance').value=p.insurance||'';
+  calcSocialInsurance();
+  // 損害保険の重要書類リンク
+  const ins=(db.docs||[]).find(d=>d.name&&d.name.includes('損害保険'));
+  const refWrap=document.getElementById('tp-insurance-ref');
+  if(ins){
+    refWrap.innerHTML=`<div style="background:var(--bg3);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text2);display:flex;align-items:center;justify-content:space-between;">
+      <span>重要書類：${ins.name}</span>
+      <button class="btn btn-secondary btn-sm" onclick="closeScreen('screen-tax-personal');showTab('docs');" style="font-size:11px;padding:4px 10px;">参照</button>
+    </div>`;
+  } else { refWrap.innerHTML=''; }
+  openScreen('screen-tax-personal');
+}
+
+function calcSocialInsurance(){
+  const care=Number(document.getElementById('tp-care').value)||0;
+  const medical=Number(document.getElementById('tp-medical').value)||0;
+  document.getElementById('tp-social-total').textContent='¥'+(care+medical).toLocaleString();
+}
+
+function saveTaxPersonal(){
+  const y=document.getElementById('tp-year').value;
+  if(!db.taxData[y]) db.taxData[y]={};
+  db.taxData[y].personal={
+    pension: document.getElementById('tp-pension').value,
+    care: document.getElementById('tp-care').value,
+    medical: document.getElementById('tp-medical').value,
+    medicalFee: document.getElementById('tp-medical-fee').value,
+    insurance: document.getElementById('tp-insurance').value,
+  };
+  saveDB(); closeScreen('screen-tax-personal'); renderTax(); updateHeaderBadge();
 }
 
 // ===== 全体レンダリング =====
 function renderAll(){
   buildFilterUI();
   renderMailList();
+  renderDocs();
+  renderTenantList();
+  renderTax();
   checkAlerts();
   updateSettingsCounts();
   checkBackupReminder();
 }
 
-// ===== 起動 =====
-initPin();
+// ===== ログイン =====
+let loginMode = 'login'; // 'login' | 'signup'
+
+function toggleLoginMode(){
+  loginMode = loginMode==='login'?'signup':'login';
+  const isSignup = loginMode==='signup';
+  document.getElementById('login-sub').textContent = isSignup?'新規アカウント作成':'メールアドレスでログイン';
+  document.getElementById('login-submit-btn').textContent = isSignup?'アカウント作成':'ログイン';
+  document.getElementById('login-mode-toggle').textContent = isSignup?'ログイン画面に戻る':'アカウントを新規作成';
+  document.getElementById('login-reset-btn').style.display = loginMode==='login'?'block':'none';
+  document.getElementById('login-error').textContent='';
+}
+
+async function submitLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const password=document.getElementById('login-password').value;
+  const errEl=document.getElementById('login-error');
+  const btn=document.getElementById('login-submit-btn');
+  if(!email||!password){errEl.textContent='メールアドレスとパスワードを入力してください';return;}
+  btn.textContent='処理中...'; btn.disabled=true;
+  try{
+    let result;
+    if(loginMode==='signup'){
+      result=await supabase.auth.signUp({email,password});
+      if(result.error) throw result.error;
+      if(result.data.user&&!result.data.session){
+        errEl.style.color='#aaffaa';
+        errEl.textContent='確認メールを送信しました。メールのリンクをクリックしてください。';
+        btn.textContent='アカウント作成'; btn.disabled=false;
+        return;
+      }
+    } else {
+      result=await supabase.auth.signInWithPassword({email,password});
+      if(result.error) throw result.error;
+    }
+    currentUser=result.data.user;
+    await loadDB();
+    showAppAfterLogin();
+  }catch(e){
+    errEl.style.color='#ffaaaa';
+    const msg=e.message||'エラーが発生しました';
+    errEl.textContent=msg.includes('Invalid login')?'メールアドレスまたはパスワードが違います':
+                      msg.includes('Email not confirmed')?'メールの確認が完了していません':msg;
+    btn.textContent=loginMode==='signup'?'アカウント作成':'ログイン';
+    btn.disabled=false;
+  }
+}
+
+async function submitPasswordReset(){
+  const email=document.getElementById('login-email').value.trim();
+  const errEl=document.getElementById('login-error');
+  if(!email){errEl.textContent='メールアドレスを入力してください';return;}
+  const {error}=await supabase.auth.resetPasswordForEmail(email);
+  if(error){errEl.textContent=error.message;}
+  else{errEl.style.color='#aaffaa';errEl.textContent='パスワードリセットメールを送信しました。';}
+}
+
+function showAppAfterLogin(){
+  document.getElementById('login-screen').style.display='none';
+  // PIN設定済みならPIN画面へ、未設定ならそのままアプリへ
+  if(db.pin){
+    pinMode='verify';
+    document.getElementById('pin-prompt').textContent='PINコードを入力してください';
+    document.getElementById('pin-screen').style.display='flex';
+  } else {
+    pinMode='setup';
+    document.getElementById('pin-prompt').textContent='PINコードを設定してください（4桁）';
+    document.getElementById('pin-hint').textContent='初回起動時です。任意の4桁を設定してください';
+    document.getElementById('pin-screen').style.display='flex';
+  }
+}
+
+function unlock(){
+  document.getElementById('pin-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('fab').classList.add('visible');
+  initDefaultDocs();
+  renderAll();
+  showTab('mail');
+}
+function lockApp(){
+  pinBuf=''; pinMode='verify'; updDots();
+  document.getElementById('pin-error').textContent='';
+  document.getElementById('pin-prompt').textContent='PINコードを入力してください';
+  document.getElementById('app').style.display='none';
+  document.getElementById('fab').classList.remove('visible');
+  document.getElementById('pin-screen').style.display='flex';
+  closeAllScreens();
+}
+
+// ===== 起動処理 =====
+async function initApp(){
+  // 既存セッション確認
+  const {data:{session}}=await supabase.auth.getSession();
+  if(session){
+    currentUser=session.user;
+    await loadDB();
+    showAppAfterLogin();
+  } else {
+    // ログイン画面を表示
+    document.getElementById('login-screen').style.display='flex';
+  }
+}
+
+initApp();
 </script>
 </body>
 </html>

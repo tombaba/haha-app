@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>馬場みね子　情報管理アプリ</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg:#f2f1ed;--bg2:#ffffff;--bg3:#eae9e4;--bg4:#f8f7f3;
@@ -20,6 +21,22 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:16px;-webkit-font-smoothing:antialiased;}
+
+/* ===== ログイン画面 ===== */
+#login-screen{position:fixed;inset:0;background:linear-gradient(160deg,var(--accent2) 0%,#1a3a5c 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10000;padding:2rem;}
+.login-logo{font-size:48px;margin-bottom:1rem;}
+.login-title{color:#fff;font-size:20px;font-weight:700;margin-bottom:.3rem;}
+.login-sub{color:rgba(255,255,255,.7);font-size:13px;margin-bottom:2rem;text-align:center;}
+.login-form{width:100%;max-width:320px;}
+.login-input{width:100%;padding:14px 16px;border:none;border-radius:12px;font-size:16px;font-family:inherit;background:rgba(255,255,255,.15);color:#fff;outline:none;margin-bottom:10px;}
+.login-input::placeholder{color:rgba(255,255,255,.5);}
+.login-input:focus{background:rgba(255,255,255,.22);}
+.login-btn{width:100%;padding:14px;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;transition:opacity .15s;}
+.login-btn:active{opacity:.8;}
+.login-btn-primary{background:#fff;color:var(--accent2);}
+.login-btn-secondary{background:rgba(255,255,255,.15);color:#fff;}
+#login-error{color:#ffaaaa;font-size:13px;margin-top:.5rem;min-height:18px;text-align:center;}
+#login-mode-toggle{color:rgba(255,255,255,.7);font-size:13px;text-align:center;margin-top:1rem;cursor:pointer;text-decoration:underline;}
 
 /* ===== PIN ===== */
 #pin-screen{position:fixed;inset:0;background:linear-gradient(160deg,var(--accent2) 0%,#1a3a5c 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;padding:2rem;}
@@ -310,11 +327,25 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 </head>
 <body>
 
+<div id="login-screen" style="display:none;">
+  <div class="login-logo">📬</div>
+  <div class="login-title">馬場みね子　情報管理アプリ</div>
+  <div class="login-sub" id="login-sub">メールアドレスでログイン</div>
+  <div class="login-form">
+    <input type="email" class="login-input" id="login-email" placeholder="メールアドレス" autocomplete="email">
+    <input type="password" class="login-input" id="login-password" placeholder="パスワード" autocomplete="current-password">
+    <div id="login-error"></div>
+    <button class="login-btn login-btn-primary" id="login-submit-btn" onclick="submitLogin()">ログイン</button>
+    <button class="login-btn login-btn-secondary" id="login-reset-btn" onclick="submitPasswordReset()" style="display:none;">パスワードリセットメールを送る</button>
+    <div id="login-mode-toggle" onclick="toggleLoginMode()">アカウントを新規作成</div>
+  </div>
+</div>
+
 <!-- ===== PIN ===== -->
-<div id="pin-screen">
+<div id="pin-screen" style="display:none;">
   <div class="pin-logo">📬</div>
   <div class="pin-title">馬場みね子　情報管理アプリ</div>
-  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v4.4</div>
+  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v4.5</div>
   <p id="pin-prompt">PINコードを入力してください</p>
   <div class="pin-dots">
     <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
@@ -1349,8 +1380,14 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 </div>
 
 <script>
+// ===== Supabase設定 =====
+const SUPABASE_URL = 'https://ndbwijlautdtthljkuzf.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Lf28B6u9gswaVX-Eg7htsA_57N6-_Z2';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let currentUser = null;
+
 // ===== データ管理 =====
-const KEY = 'babaminekoapp_v1';
+const KEY = 'babaminekoapp_v1'; // フォールバック用
 let db = {
   pin: null,
   mails: [],
@@ -1365,9 +1402,36 @@ let db = {
   taxData: {}
 };
 
-function loadDB(){ try{ const d=localStorage.getItem(KEY); if(d) db=JSON.parse(d); }catch(e){} }
-function saveDB(){ try{ localStorage.setItem(KEY,JSON.stringify(db)); }catch(e){} }
-loadDB();
+async function loadDB(){
+  try{
+    if(currentUser){
+      const {data,error}=await supabase
+        .from('app_data')
+        .select('data')
+        .eq('user_id',currentUser.id)
+        .single();
+      if(error&&error.code!=='PGRST116') throw error;
+      if(data?.data) db={...db,...data.data};
+    } else {
+      // フォールバック：localStorage
+      const d=localStorage.getItem(KEY);
+      if(d) db=JSON.parse(d);
+    }
+  }catch(e){ console.error('loadDB error:',e); }
+}
+
+async function saveDB(){
+  try{
+    if(currentUser){
+      const {error}=await supabase
+        .from('app_data')
+        .upsert({user_id:currentUser.id, data:db},{onConflict:'user_id'});
+      if(error) throw error;
+    } else {
+      localStorage.setItem(KEY,JSON.stringify(db));
+    }
+  }catch(e){ console.error('saveDB error:',e); }
+}
 
 // ===== 固定タグ =====
 const FIXED_TAGS = ['白色申告','重要書類','不動産','家族・友人'];
@@ -1430,33 +1494,6 @@ function checkPin(){
     }
   }
 }
-function unlock(){
-  document.getElementById('pin-screen').style.display='none';
-  document.getElementById('app').style.display='flex';
-  document.getElementById('fab').classList.add('visible');
-  initDefaultDocs();
-  renderAll();
-  showTab('mail');
-}
-function lockApp(){
-  pinBuf=''; pinMode='verify'; updDots();
-  document.getElementById('pin-error').textContent='';
-  document.getElementById('pin-prompt').textContent='PINコードを入力してください';
-  document.getElementById('app').style.display='none';
-  document.getElementById('fab').classList.remove('visible');
-  document.getElementById('pin-screen').style.display='flex';
-  closeAllScreens();
-}
-function changePin(){
-  const np=document.getElementById('new-pin').value;
-  const cp=document.getElementById('confirm-pin').value;
-  const msg=document.getElementById('pin-change-msg');
-  if(!/^\d{4}$/.test(np)){msg.style.color='red';msg.textContent='4桁の数字を入力してください';return;}
-  if(np!==cp){msg.style.color='red';msg.textContent='PINが一致しません';return;}
-  db.pin=np; saveDB(); msg.style.color='green'; msg.textContent='✓ PINを変更しました';
-  document.getElementById('new-pin').value=''; document.getElementById('confirm-pin').value='';
-}
-
 // ===== タブ =====
 function showTab(tab){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -3506,8 +3543,111 @@ function renderAll(){
   checkBackupReminder();
 }
 
-// ===== 起動 =====
-initPin();
+// ===== ログイン =====
+let loginMode = 'login'; // 'login' | 'signup'
+
+function toggleLoginMode(){
+  loginMode = loginMode==='login'?'signup':'login';
+  const isSignup = loginMode==='signup';
+  document.getElementById('login-sub').textContent = isSignup?'新規アカウント作成':'メールアドレスでログイン';
+  document.getElementById('login-submit-btn').textContent = isSignup?'アカウント作成':'ログイン';
+  document.getElementById('login-mode-toggle').textContent = isSignup?'ログイン画面に戻る':'アカウントを新規作成';
+  document.getElementById('login-reset-btn').style.display = loginMode==='login'?'block':'none';
+  document.getElementById('login-error').textContent='';
+}
+
+async function submitLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const password=document.getElementById('login-password').value;
+  const errEl=document.getElementById('login-error');
+  const btn=document.getElementById('login-submit-btn');
+  if(!email||!password){errEl.textContent='メールアドレスとパスワードを入力してください';return;}
+  btn.textContent='処理中...'; btn.disabled=true;
+  try{
+    let result;
+    if(loginMode==='signup'){
+      result=await supabase.auth.signUp({email,password});
+      if(result.error) throw result.error;
+      if(result.data.user&&!result.data.session){
+        errEl.style.color='#aaffaa';
+        errEl.textContent='確認メールを送信しました。メールのリンクをクリックしてください。';
+        btn.textContent='アカウント作成'; btn.disabled=false;
+        return;
+      }
+    } else {
+      result=await supabase.auth.signInWithPassword({email,password});
+      if(result.error) throw result.error;
+    }
+    currentUser=result.data.user;
+    await loadDB();
+    showAppAfterLogin();
+  }catch(e){
+    errEl.style.color='#ffaaaa';
+    const msg=e.message||'エラーが発生しました';
+    errEl.textContent=msg.includes('Invalid login')?'メールアドレスまたはパスワードが違います':
+                      msg.includes('Email not confirmed')?'メールの確認が完了していません':msg;
+    btn.textContent=loginMode==='signup'?'アカウント作成':'ログイン';
+    btn.disabled=false;
+  }
+}
+
+async function submitPasswordReset(){
+  const email=document.getElementById('login-email').value.trim();
+  const errEl=document.getElementById('login-error');
+  if(!email){errEl.textContent='メールアドレスを入力してください';return;}
+  const {error}=await supabase.auth.resetPasswordForEmail(email);
+  if(error){errEl.textContent=error.message;}
+  else{errEl.style.color='#aaffaa';errEl.textContent='パスワードリセットメールを送信しました。';}
+}
+
+function showAppAfterLogin(){
+  document.getElementById('login-screen').style.display='none';
+  // PIN設定済みならPIN画面へ、未設定ならそのままアプリへ
+  if(db.pin){
+    pinMode='verify';
+    document.getElementById('pin-prompt').textContent='PINコードを入力してください';
+    document.getElementById('pin-screen').style.display='flex';
+  } else {
+    pinMode='setup';
+    document.getElementById('pin-prompt').textContent='PINコードを設定してください（4桁）';
+    document.getElementById('pin-hint').textContent='初回起動時です。任意の4桁を設定してください';
+    document.getElementById('pin-screen').style.display='flex';
+  }
+}
+
+function unlock(){
+  document.getElementById('pin-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('fab').classList.add('visible');
+  initDefaultDocs();
+  renderAll();
+  showTab('mail');
+}
+function lockApp(){
+  pinBuf=''; pinMode='verify'; updDots();
+  document.getElementById('pin-error').textContent='';
+  document.getElementById('pin-prompt').textContent='PINコードを入力してください';
+  document.getElementById('app').style.display='none';
+  document.getElementById('fab').classList.remove('visible');
+  document.getElementById('pin-screen').style.display='flex';
+  closeAllScreens();
+}
+
+// ===== 起動処理 =====
+async function initApp(){
+  // 既存セッション確認
+  const {data:{session}}=await supabase.auth.getSession();
+  if(session){
+    currentUser=session.user;
+    await loadDB();
+    showAppAfterLogin();
+  } else {
+    // ログイン画面を表示
+    document.getElementById('login-screen').style.display='flex';
+  }
+}
+
+initApp();
 </script>
 </body>
 </html>
