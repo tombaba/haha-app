@@ -345,7 +345,7 @@ select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 <div id="pin-screen" style="display:none;">
   <div class="pin-logo">📬</div>
   <div class="pin-title">馬場みね子　情報管理アプリ</div>
-  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v4.6</div>
+  <div style="color:rgba(255,255,255,.4);font-size:11px;margin-bottom:.5rem;">v4.7</div>
   <p id="pin-prompt">PINコードを入力してください</p>
   <div class="pin-dots">
     <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
@@ -3636,14 +3636,27 @@ function lockApp(){
 
 // ===== 起動処理 =====
 async function initApp(){
+  // メール確認後のコールバック処理（URLにtokenが含まれる場合）
+  const hash = window.location.hash;
+  if(hash && hash.includes('access_token')){
+    const { data, error } = await supabaseClient.auth.getSession();
+    if(data?.session){
+      currentUser = data.session.user;
+      // URLのハッシュをクリア
+      window.history.replaceState(null, '', window.location.pathname);
+      await loadDB();
+      showAppAfterLogin();
+      return;
+    }
+  }
+
   // 既存セッション確認
-  const {data:{session}}=await supabaseClient.auth.getSession();
+  const {data:{session}} = await supabaseClient.auth.getSession();
   if(session){
-    currentUser=session.user;
+    currentUser = session.user;
     await loadDB();
     showAppAfterLogin();
   } else {
-    // ログイン画面を表示
     document.getElementById('login-screen').style.display='flex';
   }
 }
